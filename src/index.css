@@ -1,0 +1,156 @@
+/* AMUSEMAC GROWTH AGENT - SYSTEM LIGHT & DARK THEME SUPPORT */
+
+:root, html.dark {
+  --bg-main: #0b0c10;
+  --bg-card: #141620;
+  --bg-card-hover: #1b1e2c;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-gold: rgba(245, 184, 46, 0.25);
+  --gold-accent: #f5b82e;
+  --gold-accent-hover: #e5a417;
+  color-scheme: dark;
+}
+
+html.light {
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-gold: rgba(217, 148, 12, 0.35);
+  --gold-accent: #d9940c;
+  --gold-accent-hover: #b87a05;
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html.light body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html.light .bg-\[\#0b0c10\] {
+  background-color: #f8fafc !important;
+}
+
+html.light .bg-\[\#10121a\] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .bg-\[\#141620\],
+html.light .bg-\[\#121422\],
+html.light .bg-\[\#151726\],
+html.light .bg-\[\#121420\],
+html.light .bg-\[\#141624\] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-300,
+html.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+html.light .border-\[\#202436\],
+html.light .border-\[\#2b304a\],
+html.light .border-\[\#23273d\],
+html.light .border-\[\#22273c\] {
+  border-color: #e2e8f0 !important;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #282c3f;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #f5b82e;
+}
+
+/* Glassmorphism Card Utility */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06);
+}
+
+.glass-card-gold {
+  background: rgba(245, 184, 46, 0.04);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-gold);
+  box-shadow: 0 8px 32px 0 rgba(245, 184, 46, 0.08);
+}
+
+html.light .glass-card-gold {
+  background: rgba(245, 184, 46, 0.08) !important;
+  border: 1px solid rgba(217, 148, 12, 0.4) !important;
+}
+
+/* Gold Gradient Text */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #f5b82e 0%, #fbd872 50%, #d49b19 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Button Animations */
+.btn-gold {
+  background: linear-gradient(135deg, #f5b82e 0%, #d49b19 100%);
+  color: #0c0d12;
+  font-weight: 700;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 15px rgba(245, 184, 46, 0.25);
+}
+
+.btn-gold:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245, 184, 46, 0.4);
+  filter: brightness(1.05);
+}
+
+/* Pulse animation for live indicators */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.08); }
+}
+
+.pulse-live {
+  animation: pulse-glow 2s infinite ease-in-out;
+}

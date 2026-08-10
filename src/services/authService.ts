@@ -1,0 +1,416 @@
+import { User, Organization, AuthProviderType, AuthIdentity } from '../types/saas';
+import { INITIAL_USERS, INITIAL_ORGANIZATIONS } from '../data/plansCatalog';
+import { loadOrganizationsList, saveOrganizationsList } from './tenantStore';
+
+export interface AuthSession {
+  user: User;
+  organization: Organization;
+  token: string;
+  expiresAt: string;
+}
+
+const AUTH_SESSION_KEY = 'amusemac_auth_session';
+const USER_STORE_KEY = 'amusemac_users_list';
+
+/**
+ * Collision-safe UUID generator
+ */
+function generateUuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
+ * Resolves real display name according to strict priority:
+ * profile name -> given_name + family_name -> email title-cased name.
+ * Never uses "GOOGLE User" or provider defaults.
+ */
+export function resolveDisplayName(
+  profileName?: string,
+  givenName?: string,
+  familyName?: string,
+  email?: string
+): string {
+  if (profileName && profileName.trim() && !profileName.toLowerCase().includes('user')) {
+    return profileName.trim();
+  }
+  if (givenName && givenName.trim()) {
+    return `${givenName.trim()} ${familyName ? familyName.trim() : ''}`.trim();
+  }
+  if (email && email.includes('@')) {
+    const prefix = email.split('@')[0];
+    const parts = prefix.replace(/[._-]/g, ' ').split(' ').filter(Boolean);
+    if (parts.length > 0) {
+      return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+    }
+  }
+  return 'Workspace Member';
+}
+
+/**
+ * Loads persisted user accounts list
+ */
+export function loadUsersList(): User[] {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem(USER_STORE_KEY);
+      if (saved) return JSON.parse(saved);
+    }
+  } catch (e) {}
+  return INITIAL_USERS;
+}
+
+/**
+ * Saves persisted user accounts list
+ */
+export function saveUsersList(users: User[]): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(USER_STORE_KEY, JSON.stringify(users));
+    }
+  } catch (e) {}
+}
+
+/**
+ * Retrieves current active authenticated session if valid
+ */
+export function getCurrentSession(): AuthSession | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const saved = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!saved) return null;
+    const session: AuthSession = JSON.parse(saved);
+
+    // Check 24h session expiry
+    if (new Date(session.expiresAt).getTime() < Date.now()) {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      return null;
+    }
+    return session;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Saves authenticated session
+ */
+export function saveSession(user: User, organization: Organization): AuthSession {
+  const expiresAt = new Date(Date.now() + 86400000).toISOString(); // 24 Hours
+  const session: AuthSession = {
+    user,
+    organization,
+    token: `amu_sess_${user.userId}_${Date.now()}`,
+    expiresAt
+  };
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+    }
+  } catch (e) {}
+  return session;
+}
+
+/**
+ * Authenticates user via Email & Password
+ */
+export async function loginUser(email: string, password: string): Promise<AuthSession> {
+  await new Promise(r => setTimeout(r, 400));
+
+  const cleanEmail = email.trim().toLowerCase();
+  const users = loadUsersList();
+  const orgs = loadOrganizationsList();
+
+  // 1. Find matching existing user
+  const foundUser = users.find(u => u.email.toLowerCase() === cleanEmail);
+
+  if (foundUser) {
+    const targetOrg = orgs.find(o => o.orgId === foundUser.orgId) || INITIAL_ORGANIZATIONS[0];
+    return saveSession(foundUser, targetOrg);
+  }
+
+  // 2. Find matching existing org by admin email
+  const matchingOrg = orgs.find(o => o.adminEmail.toLowerCase() === cleanEmail);
+  if (matchingOrg) {
+    const matchedUser: User = {
+      userId: `usr-${matchingOrg.orgId}-admin`,
+      orgId: matchingOrg.orgId,
+      email: matchingOrg.adminEmail,
+      name: matchingOrg.adminName,
+      fullName: matchingOrg.adminName,
+      whatsappNumber: '',
+      emailVerified: true,
+      whatsappVerified: false,
+      role: 'ADMIN', // Org Admin
+      status: 'ACTIVE',
+      createdAt: matchingOrg.createdAt,
+      authIdentities: [
+        {
+          identityId: `id-email-${generateUuid()}`,
+          userId: `usr-${matchingOrg.orgId}-admin`,
+          provider: 'EMAIL',
+          providerAccountId: cleanEmail,
+          email: cleanEmail,
+          connectedAt: new Date().toISOString(),
+          isPrimary: true
+        }
+      ]
+    };
+    saveUsersList([...users, matchedUser]);
+    return saveSession(matchedUser, matchingOrg);
+  }
+
+  // 3. NEW CUSTOMER SIGNUP VIA EMAIL LOGIN: Generate isolated FREE workspace
+  const displayName = resolveDisplayName(undefined, undefined, undefined, cleanEmail);
+  const newOrgId = `org-cust-${generateUuid()}`;
+
+  const newOrg: Organization = {
+    orgId: newOrgId,
+    companyName: `${displayName}'s Workspace`,
+    tagline: 'SaaS Customer Workspace',
+    website: 'https://',
+    status: 'ACTIVE',
+    planId: 'FREE', // ALWAYS assign FREE plan to new signups
+    emailConfig: {
+      provider: 'CUSTOM_SMTP',
+      email: cleanEmail,
+      status: 'SIMULATED'
+    },
+    connectedMailboxes: [],
+    sheetsWebhookUrl: '',
+    createdAt: new Date().toISOString().slice(0, 10),
+    renewalDate: new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
+    adminEmail: cleanEmail,
+    adminName: displayName,
+    notes: 'Created via Email Auth'
+  };
+
+  const newUser: User = {
+    userId: `usr-${newOrgId}-admin`,
+    orgId: newOrgId,
+    email: cleanEmail,
+    name: displayName,
+    fullName: displayName,
+    whatsappNumber: '',
+    emailVerified: true,
+    whatsappVerified: false,
+    role: 'ADMIN', // Org Admin for their workspace ONLY
+    status: 'ACTIVE',
+    createdAt: new Date().toISOString().slice(0, 10),
+    authIdentities: [
+      {
+        identityId: `id-email-${generateUuid()}`,
+        userId: `usr-${newOrgId}-admin`,
+        provider: 'EMAIL',
+        providerAccountId: cleanEmail,
+        email: cleanEmail,
+        connectedAt: new Date().toISOString(),
+        isPrimary: true
+      }
+    ]
+  };
+
+  saveOrganizationsList([...orgs, newOrg]);
+  saveUsersList([...users, newUser]);
+  return saveSession(newUser, newOrg);
+}
+
+/**
+ * Authenticates user via OAuth Provider (Google, Microsoft, Apple, Zoho)
+ */
+export async function loginWithOAuthProvider(
+  provider: AuthProviderType,
+  userEmail?: string,
+  userName?: string,
+  givenName?: string,
+  familyName?: string
+): Promise<AuthSession> {
+  await new Promise(r => setTimeout(r, 400));
+
+  const cleanEmail = userEmail ? userEmail.trim().toLowerCase() : `user_${generateUuid().slice(0, 8)}@gmail.com`;
+  const displayName = resolveDisplayName(userName, givenName, familyName, cleanEmail);
+
+  const users = loadUsersList();
+  const orgs = loadOrganizationsList();
+
+  // 1. Check if user already exists
+  const foundUser = users.find(u => u.email.toLowerCase() === cleanEmail);
+
+  if (foundUser) {
+    const targetOrg = orgs.find(o => o.orgId === foundUser.orgId) || INITIAL_ORGANIZATIONS[0];
+    return saveSession(foundUser, targetOrg);
+  }
+
+  // 2. Check if matching org exists by admin email
+  const matchingOrg = orgs.find(o => o.adminEmail.toLowerCase() === cleanEmail);
+  if (matchingOrg) {
+    const matchedUser: User = {
+      userId: `usr-${matchingOrg.orgId}-admin`,
+      orgId: matchingOrg.orgId,
+      email: cleanEmail,
+      name: displayName,
+      fullName: displayName,
+      whatsappNumber: '',
+      emailVerified: true,
+      whatsappVerified: false,
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      createdAt: matchingOrg.createdAt,
+      authIdentities: [
+        {
+          identityId: `id-${provider.toLowerCase()}-${generateUuid()}`,
+          userId: `usr-${matchingOrg.orgId}-admin`,
+          provider,
+          providerAccountId: `acct-${provider.toLowerCase()}-${generateUuid()}`,
+          email: cleanEmail,
+          name: displayName,
+          connectedAt: new Date().toISOString(),
+          isPrimary: true
+        }
+      ]
+    };
+    saveUsersList([...users, matchedUser]);
+    return saveSession(matchedUser, matchingOrg);
+  }
+
+  // 3. NEW CUSTOMER VIA OAUTH: Create isolated customer workspace on FREE plan
+  const newOrgId = `org-cust-${generateUuid()}`;
+
+  const newOrg: Organization = {
+    orgId: newOrgId,
+    companyName: `${displayName}'s Workspace`,
+    tagline: 'SaaS Customer Workspace',
+    website: 'https://',
+    status: 'ACTIVE',
+    planId: 'FREE', // ALWAYS assign FREE plan to new signups!
+    emailConfig: {
+      provider: 'CUSTOM_SMTP',
+      email: cleanEmail,
+      status: 'SIMULATED'
+    },
+    connectedMailboxes: [],
+    sheetsWebhookUrl: '',
+    createdAt: new Date().toISOString().slice(0, 10),
+    renewalDate: new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
+    adminEmail: cleanEmail,
+    adminName: displayName,
+    notes: `Created via ${provider} OAuth`
+  };
+
+  const newUser: User = {
+    userId: `usr-${newOrgId}-admin`,
+    orgId: newOrgId,
+    email: cleanEmail,
+    name: displayName,
+    fullName: displayName,
+    whatsappNumber: '',
+    emailVerified: true,
+    whatsappVerified: false,
+    role: 'ADMIN', // Org Admin ONLY (NOT platform SUPER_ADMIN)
+    status: 'ACTIVE',
+    createdAt: new Date().toISOString().slice(0, 10),
+    authIdentities: [
+      {
+        identityId: `id-${provider.toLowerCase()}-${generateUuid()}`,
+        userId: `usr-${newOrgId}-admin`,
+        provider,
+        providerAccountId: `acct-${provider.toLowerCase()}-${generateUuid()}`,
+        email: cleanEmail,
+        name: displayName,
+        connectedAt: new Date().toISOString(),
+        isPrimary: true
+      }
+    ]
+  };
+
+  saveOrganizationsList([...orgs, newOrg]);
+  saveUsersList([...users, newUser]);
+  return saveSession(newUser, newOrg);
+}
+
+/**
+ * Registers new user and organization via signup form
+ */
+export async function signupUser(
+  companyName: string,
+  email: string,
+  password: string
+): Promise<AuthSession> {
+  await new Promise(r => setTimeout(r, 400));
+
+  const cleanEmail = email.trim().toLowerCase();
+  const displayName = companyName.trim() + ' Admin';
+  const newOrgId = `org-cust-${generateUuid()}`;
+
+  const newOrg: Organization = {
+    orgId: newOrgId,
+    companyName: companyName.trim(),
+    tagline: 'SaaS Client Workspace',
+    website: 'https://',
+    status: 'ACTIVE',
+    planId: 'FREE', // Assign FREE plan by default
+    trialEndDate: new Date(Date.now() + 86400000 * 7).toISOString().slice(0, 10),
+    emailConfig: {
+      provider: 'CUSTOM_SMTP',
+      email: cleanEmail,
+      status: 'SIMULATED'
+    },
+    connectedMailboxes: [],
+    sheetsWebhookUrl: '',
+    createdAt: new Date().toISOString().slice(0, 10),
+    renewalDate: new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
+    adminEmail: cleanEmail,
+    adminName: displayName,
+    notes: 'Created via Customer Signup'
+  };
+
+  const newUser: User = {
+    userId: `usr-${newOrgId}-admin`,
+    orgId: newOrgId,
+    email: cleanEmail,
+    name: displayName,
+    fullName: displayName,
+    whatsappNumber: '',
+    emailVerified: true,
+    whatsappVerified: false,
+    role: 'ADMIN', // Org Admin ONLY
+    status: 'ACTIVE',
+    createdAt: new Date().toISOString().slice(0, 10),
+    authIdentities: [
+      {
+        identityId: `id-email-${generateUuid()}`,
+        userId: `usr-${newOrgId}-admin`,
+        provider: 'EMAIL',
+        providerAccountId: cleanEmail,
+        email: cleanEmail,
+        connectedAt: new Date().toISOString(),
+        isPrimary: true
+      }
+    ]
+  };
+
+  const existingOrgs = loadOrganizationsList();
+  const existingUsers = loadUsersList();
+
+  saveOrganizationsList([...existingOrgs, newOrg]);
+  saveUsersList([...existingUsers, newUser]);
+
+  return saveSession(newUser, newOrg);
+}
+
+/**
+ * Logs out active authenticated session
+ */
+export function logoutUser(): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+    }
+  } catch (e) {}
+}
