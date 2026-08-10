@@ -1,13 +1,35 @@
 import { EmailMessage, ZohoMailConfigStatus } from '../types/email';
 import { Lead } from '../types/lead';
 
+function getAuthHeaders(orgId?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('amusemac_auth_session');
+      if (saved) {
+        const session = JSON.parse(saved);
+        if (session && session.token) {
+          headers['Authorization'] = `Bearer ${session.token}`;
+        }
+        if (session && session.organization && session.organization.orgId) {
+          headers['X-Organization-Id'] = session.organization.orgId;
+        }
+      }
+    }
+  } catch (e) {}
+  if (orgId && !headers['X-Organization-Id']) {
+    headers['X-Organization-Id'] = orgId;
+  }
+  return headers;
+}
+
 export async function fetchZohoMailStatus(orgId?: string): Promise<ZohoMailConfigStatus> {
   try {
     const url = orgId ? `/api/mail/status?orgId=${encodeURIComponent(orgId)}` : '/api/mail/status';
     const res = await fetch(url, {
-      headers: {
-        'X-Organization-Id': orgId || ''
-      }
+      headers: getAuthHeaders(orgId)
     });
     if (res.ok) {
       return await res.json();
@@ -44,7 +66,7 @@ export async function sendZohoEmail(payload: {
   try {
     const res = await fetch('/api/mail/send', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(payload)
     });
 
@@ -69,7 +91,7 @@ export async function syncZohoInbox(leads: Lead[] = []): Promise<{
   try {
     const res = await fetch('/api/mail/sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ leads })
     });
 
@@ -86,7 +108,9 @@ export async function syncZohoInbox(leads: Lead[] = []): Promise<{
 
 export async function fetchEmailLogs(): Promise<EmailMessage[]> {
   try {
-    const res = await fetch('/api/mail/logs');
+    const res = await fetch('/api/mail/logs', {
+      headers: getAuthHeaders()
+    });
     if (res.ok) {
       const data = await res.json();
       return data.logs || [];
@@ -97,7 +121,9 @@ export async function fetchEmailLogs(): Promise<EmailMessage[]> {
 
 export async function fetchLeadThread(leadId: string): Promise<EmailMessage[]> {
   try {
-    const res = await fetch(`/api/mail/thread/${leadId}`);
+    const res = await fetch(`/api/mail/thread/${leadId}`, {
+      headers: getAuthHeaders()
+    });
     if (res.ok) {
       const data = await res.json();
       return data.thread || [];
@@ -110,7 +136,7 @@ export async function associateEmailToLead(emailId: string, leadId: string): Pro
   try {
     const res = await fetch('/api/mail/associate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ emailId, leadId })
     });
     if (res.ok) {
@@ -124,7 +150,7 @@ export async function saveDraftEmail(payload: any): Promise<{ success: boolean; 
   try {
     const res = await fetch('/api/mail/draft', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(payload)
     });
     if (res.ok) {
@@ -138,7 +164,7 @@ export async function markEmailAsRead(emailId: string): Promise<{ success: boole
   try {
     const res = await fetch('/api/mail/read', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ emailId })
     });
     if (res.ok) {
@@ -152,7 +178,7 @@ export async function moveEmailToTrash(emailId: string): Promise<{ success: bool
   try {
     const res = await fetch('/api/mail/trash', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ emailId })
     });
     if (res.ok) {
@@ -166,14 +192,14 @@ export async function sendTestEmail(testRecipient: string): Promise<{ success: b
   try {
     const res = await fetch('/api/mail/test-send', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ testRecipient })
     });
     if (res.ok) {
       return await res.json();
     }
   } catch (err: any) {
-    return { success: false, message: err?.message || 'Connection error' };
+    return { success: false, message: `Failed to send test email: ${err?.message}` };
   }
-  return { success: false, message: 'Failed to send test email.' };
+  return { success: false, message: 'Server offline or error sending test email.' };
 }

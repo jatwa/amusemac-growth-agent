@@ -103,10 +103,24 @@ export function getCurrentSession(): AuthSession | null {
  */
 export function saveSession(user: User, organization: Organization): AuthSession {
   const expiresAt = new Date(Date.now() + 86400000).toISOString(); // 24 Hours
+  const tokenPayload = {
+    userId: user.userId,
+    orgId: user.orgId,
+    role: user.role,
+    email: user.email,
+    exp: Date.now() + 86400000
+  };
+  const jsonStr = JSON.stringify(tokenPayload);
+  const b64 = typeof btoa !== 'undefined'
+    ? btoa(jsonStr)
+    : Buffer.from(jsonStr).toString('base64');
+  const encodedPayload = b64.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const token = `amu_sess_${encodedPayload}`;
+
   const session: AuthSession = {
     user,
     organization,
-    token: `amu_sess_${user.userId}_${Date.now()}`,
+    token,
     expiresAt
   };
   try {
