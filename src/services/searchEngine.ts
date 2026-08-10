@@ -1,5 +1,6 @@
 import { Lead, SearchFilterOptions, LeadSearchResult, SearchReport, ClientProfile } from '../types/lead';
 import { AMUSEMAC_CLIENT_PROFILE, INITIAL_CLIENT_PROFILES } from '../data/clientProfiles';
+import { DEFAULT_CUSTOMER_PROFILE } from './tenantStore';
 import { harvestRawProspectPool } from './marketDiscovery';
 import { deduplicateRawCompanies } from './prospectDatabase';
 import { qualifyCompanyAgainstIcp } from './icpQualifier';
@@ -17,6 +18,7 @@ export interface SearchOptions {
   selectedServices?: string[];
   existingLeads?: Lead[];
   clientId?: string;
+  clientProfile?: ClientProfile;
   geminiApiKey?: string;
   onProgress?: (step: string, percent: number) => void;
 }
@@ -31,16 +33,18 @@ export async function executeLeadSearch(options: SearchOptions): Promise<LeadSea
     location,
     count = 5,
     minAiScore = 60,
-    industryCategory = 'Festive / E-Commerce / Audio',
+    industryCategory = 'General Business',
     selectedServices,
     existingLeads = [],
-    clientId = 'amusemac-studio',
+    clientId,
+    clientProfile: providedProfile,
     onProgress
   } = options;
 
-  // Resolve active client profile
-  const clientProfile: ClientProfile =
-    INITIAL_CLIENT_PROFILES.find(p => p.clientId === clientId) || AMUSEMAC_CLIENT_PROFILE;
+  // Resolve active client profile safely
+  const clientProfile: ClientProfile = providedProfile ||
+    (clientId ? INITIAL_CLIENT_PROFILES.find(p => p.clientId === clientId) : undefined) ||
+    DEFAULT_CUSTOMER_PROFILE;
 
   // Step 1: Market Discovery & ICP Query Expansion
   onProgress?.(`Step 1/9: Market Discovery & Sector Query Expansion (${query || clientProfile.companyName})...`, 10);

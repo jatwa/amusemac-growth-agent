@@ -121,6 +121,7 @@ export const SearchHomeView: React.FC<SearchHomeViewProps> = ({
       industryCategory: filterIndustry,
       existingLeads,
       clientId: activeProfile.clientId,
+      clientProfile: activeProfile,
       onProgress: (step: string, percent: number) => {
         setProgressStatus(step);
         setSearchProgress(percent);
@@ -138,7 +139,7 @@ export const SearchHomeView: React.FC<SearchHomeViewProps> = ({
       searchQuery: naturalQuery || filterService || 'Target Buyers Scan',
       location: filterLocation,
       icp: activeProfile.companyName,
-      service: filterService || activeProfile.services[0] || 'Film Production',
+      service: filterService || activeProfile.services[0] || 'Commercial Services',
       date: new Date().toISOString().slice(0, 10),
       rawResultsCount: searchRes.totalFound,
       qualifiedCount: maskedLeads.length,

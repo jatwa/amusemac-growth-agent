@@ -437,6 +437,7 @@ export function App() {
               geminiApiKey={geminiApiKey}
               onUpdateGeminiApiKey={setGeminiApiKey}
               onImportLeads={handleAddLeads}
+              activeOrg={activeOrg}
             />
           )}
         </main>

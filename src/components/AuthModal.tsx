@@ -34,22 +34,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
     setIsLoading(true);
     setErrorMsg('');
     try {
-      // Simulate real OAuth popup return with user's email and profile name
+      // Simulate real OAuth popup return with unique user identity per login
+      const uniqueId = Math.floor(1000 + Math.random() * 9000);
       const dynamicEmail = provider === 'GOOGLE'
-        ? 'kuldeep@gmail.com'
+        ? `google.user.${uniqueId}@gmail.com`
         : provider === 'MICROSOFT'
-        ? 'alex@outlook.com'
+        ? `outlook.user.${uniqueId}@outlook.com`
         : provider === 'ZOHO'
-        ? 'zoho.user@clientdomain.com'
-        : 'apple.user@privaterelay.appleid.com';
+        ? `zoho.user.${uniqueId}@zoho.com`
+        : `apple.user.${uniqueId}@privaterelay.appleid.com`;
 
       const dynamicName = provider === 'GOOGLE'
-        ? 'Kuldeep Singh'
+        ? `Google User ${uniqueId}`
         : provider === 'MICROSOFT'
-        ? 'Alex Rivera'
+        ? `Microsoft User ${uniqueId}`
         : provider === 'ZOHO'
-        ? 'Zoho Client User'
-        : 'Apple User';
+        ? `Zoho User ${uniqueId}`
+        : `Apple User ${uniqueId}`;
 
       const session = await loginWithOAuthProvider(provider, dynamicEmail, dynamicName);
       setPendingSession(session);

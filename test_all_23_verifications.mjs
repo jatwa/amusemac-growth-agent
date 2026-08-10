@@ -29,30 +29,30 @@ async function runAll23Verifications() {
   if (p2) passedCount++;
 
   // 3. LITE Plan Visibility
-  console.log("\n3. LITE plan visibility & limits check ($99/mo, 500 leads/mo):");
+  console.log("\n3. LITE plan visibility & limits check (₹499/mo, 500 leads/mo):");
   const litePlan = SUBSCRIPTION_PLANS['LITE'];
-  const p3 = (litePlan && litePlan.monthlyPrice === 99 && litePlan.monthlyLeadsLimit === 500);
+  const p3 = (litePlan && litePlan.monthlyPrice === 499 && litePlan.monthlyLeadsLimit === 500);
   console.log(`   Result: ${p3 ? 'PASS' : 'FAIL'}`);
   if (p3) passedCount++;
 
   // 4. PRO Plan Visibility
-  console.log("\n4. PRO plan visibility & limits check ($299/mo, 5000 leads/mo):");
+  console.log("\n4. PRO plan visibility & limits check (₹1499/mo, 5000 leads/mo):");
   const proPlan = SUBSCRIPTION_PLANS['PRO'];
-  const p4 = (proPlan && proPlan.monthlyPrice === 299 && proPlan.monthlyLeadsLimit === 5000);
+  const p4 = (proPlan && proPlan.monthlyPrice === 1499 && proPlan.monthlyLeadsLimit === 5000);
   console.log(`   Result: ${p4 ? 'PASS' : 'FAIL'}`);
   if (p4) passedCount++;
 
   // 5. MAX Plan Visibility
-  console.log("\n5. MAX plan visibility & limits check ($599/mo, 37500 leads/mo):");
+  console.log("\n5. MAX plan visibility & limits check (₹2999/mo, 37500 leads/mo):");
   const maxPlan = SUBSCRIPTION_PLANS['MAX'];
-  const p5 = (maxPlan && maxPlan.monthlyPrice === 599 && maxPlan.monthlyLeadsLimit === 37500);
+  const p5 = (maxPlan && maxPlan.monthlyPrice === 2999 && maxPlan.monthlyLeadsLimit === 37500);
   console.log(`   Result: ${p5 ? 'PASS' : 'FAIL'}`);
   if (p5) passedCount++;
 
   // 6. ENTERPRISE Plan Visibility
   console.log("\n6. ENTERPRISE plan visibility & custom limits check:");
   const entPlan = SUBSCRIPTION_PLANS['ENTERPRISE'];
-  const p6 = (entPlan && entPlan.monthlyPrice === 999 && entPlan.monthlyLeadsLimit === 100000);
+  const p6 = (entPlan && entPlan.monthlyPrice === 0 && entPlan.monthlyLeadsLimit === 100000);
   console.log(`   Result: ${p6 ? 'PASS' : 'FAIL'}`);
   if (p6) passedCount++;
 

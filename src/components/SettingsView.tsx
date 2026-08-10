@@ -28,6 +28,9 @@ import {
 } from '../services/googleSheets';
 import { fetchZohoMailStatus, sendTestEmail, syncZohoInbox } from '../services/apiMailService';
 
+import { Organization } from '../types/saas';
+import { getOrgMailboxes } from '../services/mailboxService';
+
 interface SettingsViewProps {
   leads: Lead[];
   webhookUrl: string;
@@ -35,6 +38,7 @@ interface SettingsViewProps {
   geminiApiKey: string;
   onUpdateGeminiApiKey: (key: string) => void;
   onImportLeads: (imported: Lead[]) => void;
+  activeOrg?: Organization | null;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -43,7 +47,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateWebhookUrl,
   geminiApiKey,
   onUpdateGeminiApiKey,
-  onImportLeads
+  onImportLeads,
+  activeOrg
 }) => {
   const [activeSettingsTab, setActiveSettingsTab] = useState<'email' | 'sheets' | 'connected' | 'backup'>('connected');
 
@@ -52,6 +57,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const [zohoStatus, setZohoStatus] = useState<ZohoMailConfigStatus | null>(null);
   const [testRecipient, setTestRecipient] = useState('');
+
+  const mailboxes = activeOrg ? getOrgMailboxes(activeOrg.orgId) : [];
+  const isAmusemacStudio = activeOrg?.orgId === 'amusemac-studio';
 
   // Sync Status State
   const [syncStatus, setSyncStatus] = useState<'Connected' | 'Syncing' | 'Synced' | 'Failed' | 'Disconnected'>(
@@ -319,25 +327,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <p className="text-slate-400">Persistent email outreach and IMAP synchronization connections</p>
               </div>
               <span className="px-3 py-1 rounded-full bg-[#f5b82e]/10 text-[#f5b82e] font-bold border border-[#f5b82e]/30">
-                Primary: Zoho (hello@amusemacstudio.in)
+                {isAmusemacStudio ? 'Primary: Zoho (hello@amusemacstudio.in)' : mailboxes.length > 0 ? `Primary: ${mailboxes[0].provider} (${mailboxes[0].email})` : 'Primary: None Connected'}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-[#141624] border border-[#22273c] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <ZohoLogo className="w-5 h-3" />
-                    <span className="font-bold text-white">Zoho Mail Enterprise</span>
+              {isAmusemacStudio ? (
+                <div className="p-4 rounded-xl bg-[#141624] border border-[#22273c] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <ZohoLogo className="w-5 h-3" />
+                      <span className="font-bold text-white">Zoho Mail Enterprise</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-400">ACTIVE / PRIMARY</span>
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-400">ACTIVE / PRIMARY</span>
+                  <p className="text-slate-400 font-mono">hello@amusemacstudio.in (smtppro.zoho.com:465 SSL)</p>
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[10px]">Mailbox Synced</span>
+                    <button className="text-[11px] text-slate-400 hover:text-white font-bold">Disconnect</button>
+                  </div>
                 </div>
-                <p className="text-slate-400 font-mono">hello@amusemacstudio.in (smtppro.zoho.com:465 SSL)</p>
-                <div className="pt-2 flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[10px]">Mailbox Synced</span>
-                  <button className="text-[11px] text-slate-400 hover:text-white font-bold">Disconnect</button>
-                </div>
-              </div>
+              ) : mailboxes.length > 0 ? (
+                mailboxes.map(mbx => (
+                  <div key={mbx.connectionId} className="p-4 rounded-xl bg-[#141624] border border-[#22273c] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white">{mbx.provider} Mailbox</span>
+                      <span className="text-[10px] font-bold text-emerald-400">CONNECTED</span>
+                    </div>
+                    <p className="text-slate-400 font-mono">{mbx.email}</p>
+                  </div>
+                ))
+              ) : null}
 
               <div className="p-4 rounded-xl bg-[#141624] border border-[#22273c] space-y-2">
                 <div className="flex items-center justify-between">
@@ -542,37 +562,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold font-display text-white">Zoho Mailbox Integration</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Connected Enterprise Mailbox: <strong className="text-[#f5b82e]">hello@amusemacstudio.in</strong></p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Connected Mailbox: <strong className="text-[#f5b82e]">{isAmusemacStudio ? 'hello@amusemacstudio.in' : (mailboxes.find(m => m.provider === 'ZOHO')?.email || 'Not Connected')}</strong>
+                </p>
               </div>
-              <span className="px-3 py-1 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                Active System Mailbox
+              <span className={`px-3 py-1 text-xs font-bold rounded-full ${isAmusemacStudio ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                {isAmusemacStudio ? 'Active System Mailbox' : (mailboxes.some(m => m.provider === 'ZOHO') ? 'Connected' : 'Available to Connect')}
               </span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
               <div className="p-4 rounded-xl bg-[#161826] border border-[#23273c]">
                 <span className="text-[10px] text-slate-500 uppercase font-bold block">Connected Mailbox</span>
-                <span className="font-bold text-white mt-1 block truncate">hello@amusemacstudio.in</span>
+                <span className="font-bold text-white mt-1 block truncate">
+                  {isAmusemacStudio ? 'hello@amusemacstudio.in' : (mailboxes.find(m => m.provider === 'ZOHO')?.email || 'None')}
+                </span>
               </div>
 
               <div className="p-4 rounded-xl bg-[#161826] border border-[#23273c]">
                 <span className="text-[10px] text-slate-500 uppercase font-bold block">Mail Provider</span>
-                <span className="font-bold text-[#f5b82e] mt-1 block">Zoho Mail Enterprise</span>
+                <span className="font-bold text-[#f5b82e] mt-1 block">
+                  {isAmusemacStudio ? 'Zoho Mail Enterprise' : 'Zoho Mail'}
+                </span>
               </div>
 
               <div className="p-4 rounded-xl bg-[#161826] border border-[#23273c]">
                 <span className="text-[10px] text-slate-500 uppercase font-bold block">Outgoing SMTP</span>
-                <span className="font-bold text-emerald-400 mt-1 block flex items-center space-x-1">
-                  <CheckCircleIcon className="w-3.5 h-3.5" />
-                  <span>smtppro.zoho.com:465 (SSL)</span>
+                <span className={`font-bold mt-1 block flex items-center space-x-1 ${isAmusemacStudio ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  {isAmusemacStudio ? <CheckCircleIcon className="w-3.5 h-3.5" /> : null}
+                  <span>{isAmusemacStudio ? 'smtppro.zoho.com:465 (SSL)' : 'Not Configured'}</span>
                 </span>
               </div>
 
               <div className="p-4 rounded-xl bg-[#161826] border border-[#23273c]">
                 <span className="text-[10px] text-slate-500 uppercase font-bold block">Incoming IMAP</span>
-                <span className="font-bold text-emerald-400 mt-1 block flex items-center space-x-1">
-                  <CheckCircleIcon className="w-3.5 h-3.5" />
-                  <span>imappro.zoho.com:993 (SSL)</span>
+                <span className={`font-bold mt-1 block flex items-center space-x-1 ${isAmusemacStudio ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  {isAmusemacStudio ? <CheckCircleIcon className="w-3.5 h-3.5" /> : null}
+                  <span>{isAmusemacStudio ? 'imappro.zoho.com:993 (SSL)' : 'Not Configured'}</span>
                 </span>
               </div>
             </div>

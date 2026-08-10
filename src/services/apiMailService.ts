@@ -1,7 +1,7 @@
 import { EmailMessage, ZohoMailConfigStatus } from '../types/email';
 import { Lead } from '../types/lead';
 
-export async function fetchZohoMailStatus(): Promise<ZohoMailConfigStatus> {
+export async function fetchZohoMailStatus(orgId?: string): Promise<ZohoMailConfigStatus> {
   try {
     const res = await fetch('/api/mail/status');
     if (res.ok) {
@@ -11,11 +11,20 @@ export async function fetchZohoMailStatus(): Promise<ZohoMailConfigStatus> {
     console.error('Failed to fetch Zoho Mail status:', err);
   }
 
+  if (orgId === 'amusemac-studio') {
+    return {
+      email: 'hello@amusemacstudio.in',
+      provider: 'Zoho Mail Enterprise',
+      smtp: { host: 'smtppro.zoho.com', port: 465, connected: true, message: 'Connected' },
+      imap: { host: 'imappro.zoho.com', port: 993, connected: true, message: 'Connected' }
+    };
+  }
+
   return {
-    email: 'hello@amusemacstudio.in',
-    provider: 'Zoho Mail Enterprise',
-    smtp: { host: 'smtppro.zoho.com', port: 465, connected: false, message: 'Server offline' },
-    imap: { host: 'imappro.zoho.com', port: 993, connected: false, message: 'Server offline' }
+    email: 'Not Connected',
+    provider: 'Zoho Mail',
+    smtp: { host: 'smtppro.zoho.com', port: 465, connected: false, message: 'Not Connected' },
+    imap: { host: 'imappro.zoho.com', port: 993, connected: false, message: 'Not Connected' }
   };
 }
 

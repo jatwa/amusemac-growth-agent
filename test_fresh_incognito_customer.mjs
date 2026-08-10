@@ -1,6 +1,7 @@
 import { loginWithOAuthProvider, loginUser, logoutUser, getCurrentSession } from './src/services/authService.ts';
 import { canAccessAdminPanel, maskLeadForEntitlements } from './src/services/entitlementService.ts';
-import { getOrgClientProfile, DEFAULT_CUSTOMER_PROFILE, AMUSEMAC_CLIENT_PROFILE } from './src/services/tenantStore.ts';
+import { getOrgClientProfile, DEFAULT_CUSTOMER_PROFILE } from './src/services/tenantStore.ts';
+import { AMUSEMAC_CLIENT_PROFILE } from './src/data/clientProfiles.ts';
 import { SUBSCRIPTION_PLANS } from './src/data/plansCatalog.ts';
 import { checkPlanAllowance } from './src/services/usageMetering.ts';
 
@@ -39,8 +40,13 @@ async function runComprehensiveVerificationTests() {
   const isNot100k = planA.monthlyLeadsLimit === 20;
   const isDefaultProfile = profileA.companyName === DEFAULT_CUSTOMER_PROFILE.companyName;
 
-  const testAPassed = isNewOrg && isFree && isOrgAdminOnly && isRealName && isNotAmusemacStudio && isNot100k && isDefaultProfile;
+  const mailboxesA = (await import('./src/services/mailboxService.ts')).getOrgMailboxes(orgA.orgId);
+  const zohoStatusA = await (await import('./src/services/apiMailService.ts')).fetchZohoMailStatus(orgA.orgId);
+  const isMailboxClean = mailboxesA.length === 0 && zohoStatusA.email === 'Not Connected';
+
+  const testAPassed = isNewOrg && isFree && isOrgAdminOnly && isRealName && isNotAmusemacStudio && isNot100k && isDefaultProfile && isMailboxClean;
   console.log(`   - Clean Default Profile Verified: ${isDefaultProfile}`);
+  console.log(`   - Zero Mailboxes / Clean State Verified: ${isMailboxClean}`);
   console.log(`   - Result: ${testAPassed ? 'PASS' : 'FAIL'}`);
   if (testAPassed) passed++;
 
