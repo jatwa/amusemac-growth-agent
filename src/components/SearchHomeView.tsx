@@ -58,16 +58,16 @@ export const SearchHomeView: React.FC<SearchHomeViewProps> = ({
   const [naturalQuery, setNaturalQuery] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Filter Categories State
+  // Filter Categories State (Initially empty & neutral)
   const [filterIndustry, setFilterIndustry] = useState('');
-  const [filterLocation, setFilterLocation] = useState('Mumbai');
-  const [filterCompanySize, setFilterCompanySize] = useState('50-500');
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterCompanySize, setFilterCompanySize] = useState('');
   const [filterService, setFilterService] = useState('');
   const [filterBuyingSignal, setFilterBuyingSignal] = useState('');
-  const [filterDecisionMakerRole, setFilterDecisionMakerRole] = useState('CMO, Founder, Brand Head');
-  const [filterMinScore, setFilterMinScore] = useState(60);
+  const [filterDecisionMakerRole, setFilterDecisionMakerRole] = useState('');
+  const [filterMinScore, setFilterMinScore] = useState(50);
   const [filterMaxLeads, setFilterMaxLeads] = useState(10);
-  const [filterRequireContact, setFilterRequireContact] = useState(true);
+  const [filterRequireContact, setFilterRequireContact] = useState(false);
 
   // Inferred Filters Notification
   const [inferredCount, setInferredCount] = useState(0);

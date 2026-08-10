@@ -21,8 +21,43 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Helper to resolve request organization context
+function resolveOrgId(req) {
+  return (
+    req.headers['x-organization-id'] ||
+    req.query.orgId ||
+    (req.body && req.body.orgId) ||
+    'amusemac-studio'
+  );
+}
+
 // 1. GET /api/mail/status - Verification & Status indicator endpoint
 app.get('/api/mail/status', async (req, res) => {
+  const orgId = resolveOrgId(req);
+
+  // Tenant isolation boundary: hello@amusemacstudio.in Zoho mailbox is returned ONLY for amusemac-studio
+  if (orgId !== 'amusemac-studio') {
+    return res.json({
+      email: 'Not Connected',
+      provider: 'None',
+      status: 'NOT_CONNECTED',
+      smtp: {
+        host: 'N/A',
+        port: 'N/A',
+        secure: false,
+        connected: false,
+        message: 'No mailbox connected for this customer workspace'
+      },
+      imap: {
+        host: 'N/A',
+        port: 'N/A',
+        secure: false,
+        connected: false,
+        message: 'No mailbox connected for this customer workspace'
+      }
+    });
+  }
+
   const email = process.env.ZOHO_EMAIL || 'hello@amusemacstudio.in';
   const smtpHost = process.env.ZOHO_SMTP_HOST || 'smtppro.zoho.com';
   const smtpPort = process.env.ZOHO_SMTP_PORT || '465';
@@ -35,6 +70,7 @@ app.get('/api/mail/status', async (req, res) => {
   res.json({
     email,
     provider: 'Zoho Mail Enterprise',
+    status: 'CONNECTED',
     smtp: {
       host: smtpHost,
       port: smtpPort,

@@ -3,7 +3,12 @@ import { Lead } from '../types/lead';
 
 export async function fetchZohoMailStatus(orgId?: string): Promise<ZohoMailConfigStatus> {
   try {
-    const res = await fetch('/api/mail/status');
+    const url = orgId ? `/api/mail/status?orgId=${encodeURIComponent(orgId)}` : '/api/mail/status';
+    const res = await fetch(url, {
+      headers: {
+        'X-Organization-Id': orgId || ''
+      }
+    });
     if (res.ok) {
       return await res.json();
     }
