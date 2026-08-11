@@ -1,0 +1,10 @@
+name = "amusemac-growth-agent"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+[vars]
+API_ORIGIN = "http://localhost:3001"
