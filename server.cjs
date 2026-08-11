@@ -43,12 +43,21 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'amusemac-growth-backend', timestamp: new Date().toISOString() });
 });
 
-// GET /api/config - Public configuration endpoint (returns public Client IDs safely)
+// GET /api/config - Public configuration endpoint (returns public Client & Payment IDs safely)
 app.get('/api/config', (req, res) => {
   const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '';
+  const paymentUrls = {
+    LITE: process.env.PAYMENT_URL_LITE || process.env.VITE_PAYMENT_URL_LITE || '',
+    PRO: process.env.PAYMENT_URL_PRO || process.env.VITE_PAYMENT_URL_PRO || '',
+    MAX: process.env.PAYMENT_URL_MAX || process.env.VITE_PAYMENT_URL_MAX || '',
+    ENTERPRISE: process.env.PAYMENT_URL_ENTERPRISE || process.env.VITE_PAYMENT_URL_ENTERPRISE || '',
+    CHECKOUT: process.env.PAYMENT_CHECKOUT_URL || process.env.VITE_PAYMENT_CHECKOUT_URL || ''
+  };
+
   res.json({
     success: true,
-    googleClientId
+    googleClientId,
+    paymentUrls
   });
 });
 
