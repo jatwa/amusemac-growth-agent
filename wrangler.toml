@@ -6,6 +6,3 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 directory = "./dist"
 binding = "ASSETS"
-
-[vars]
-API_ORIGIN = "http://localhost:3001"

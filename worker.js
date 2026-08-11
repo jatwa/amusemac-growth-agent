@@ -1,6 +1,6 @@
 /**
  * Cloudflare Worker Entry point:
- * 1. Proxies /api/* requests to backend API_ORIGIN
+ * 1. Proxies /api/* requests to production backend API_ORIGIN (configured via Cloudflare environment variables)
  * 2. Serves static assets from ./dist via env.ASSETS binding
  * 3. Fallback to /index.html for SPA routing
  */
@@ -10,7 +10,21 @@ export default {
 
     // 1. API Request Proxy (/api/*)
     if (url.pathname.startsWith('/api/')) {
-      const apiOrigin = env.API_ORIGIN || 'http://localhost:3001';
+      const apiOrigin = env.API_ORIGIN;
+
+      if (!apiOrigin) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: 'Production API_ORIGIN not configured. Please set the API_ORIGIN environment variable in Cloudflare Workers settings.'
+          }),
+          {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
       const targetOrigin = apiOrigin.replace(/\/+$/, '');
       const targetUrl = new URL(url.pathname + url.search, targetOrigin);
 
@@ -40,7 +54,7 @@ export default {
         return new Response(
           JSON.stringify({
             success: false,
-            message: `API Proxy Error: ${err.message}`
+            message: `API Proxy Error connecting to ${targetOrigin}: ${err.message}`
           }),
           {
             status: 502,
