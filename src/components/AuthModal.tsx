@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Building2, Sparkles, ArrowRight, ShieldCheck, CheckCircle2, Check, Globe } from 'lucide-react';
-import { loginUser, signupUser, loginWithOAuthProvider, verifyGoogleAuthWithBackend, AuthSession } from '../services/authService';
+import { loginUser, signupUser, loginWithOAuthProvider, verifyGoogleAuthWithBackend, getGoogleClientId, AuthSession } from '../services/authService';
 import { AuthProviderType, EmailProviderType } from '../types/saas';
 import { GoogleLogo, MicrosoftLogo, AppleLogo, ZohoLogo, AmusemacLogo } from './ProviderLogos';
 import { IS_DEV } from '../config/env';
@@ -41,9 +41,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
     setErrorMsg('');
 
     if (provider === 'GOOGLE') {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const clientId = await getGoogleClientId();
       if (!clientId || clientId.trim() === '' || clientId.includes('YOUR_GOOGLE_CLIENT_ID')) {
-        setErrorMsg('VITE_GOOGLE_CLIENT_ID is not configured in environment variables.');
+        setErrorMsg('GOOGLE_CLIENT_ID is not configured in build or server environment variables.');
         setIsLoading(false);
         return;
       }

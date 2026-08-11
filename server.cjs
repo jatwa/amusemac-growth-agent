@@ -43,6 +43,15 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'amusemac-growth-backend', timestamp: new Date().toISOString() });
 });
 
+// GET /api/config - Public configuration endpoint (returns public Client IDs safely)
+app.get('/api/config', (req, res) => {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '';
+  res.json({
+    success: true,
+    googleClientId
+  });
+});
+
 // Helper: Verify Google ID Token server-side
 async function verifyGoogleIdTokenServer(idToken) {
   if (!idToken || typeof idToken !== 'string') {

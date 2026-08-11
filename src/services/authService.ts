@@ -236,6 +236,35 @@ export async function loginUser(email: string, password: string): Promise<AuthSe
 }
 
 /**
+ * Resolves Google Client ID across Vite build-time env, window runtime config, and backend /api/config
+ */
+export async function getGoogleClientId(): Promise<string> {
+  const envVal = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  if (envVal && typeof envVal === 'string' && envVal.trim() && !envVal.includes('YOUR_GOOGLE_CLIENT_ID')) {
+    return envVal.trim();
+  }
+
+  if (typeof window !== 'undefined' && (window as any).__AMUSEMAC_CONFIG__?.GOOGLE_CLIENT_ID) {
+    const winVal = (window as any).__AMUSEMAC_CONFIG__.GOOGLE_CLIENT_ID;
+    if (winVal && typeof winVal === 'string' && winVal.trim()) {
+      return winVal.trim();
+    }
+  }
+
+  try {
+    const res = await fetch('/api/config');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.googleClientId) {
+        return data.googleClientId.trim();
+      }
+    }
+  } catch (e) {}
+
+  return '';
+}
+
+/**
  * Authenticates user via Google OAuth ID Token server-side verification
  */
 export async function verifyGoogleAuthWithBackend(idToken: string): Promise<AuthSession> {
