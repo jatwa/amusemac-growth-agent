@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, Building2, Sparkles, ArrowRight, ShieldCheck, CheckCircle2, Check, Globe } from 'lucide-react';
 import { loginUser, signupUser, loginWithOAuthProvider, verifyGoogleAuthWithBackend, getGoogleClientId, AuthSession } from '../services/authService';
 import { AuthProviderType, EmailProviderType } from '../types/saas';
-import { GoogleLogo, MicrosoftLogo, AppleLogo, ZohoLogo, AmusemacLogo } from './ProviderLogos';
+import { GoogleLogo, ZohoLogo, AmusemacLogo } from './ProviderLogos';
 import { IS_DEV } from '../config/env';
 
 declare global {
@@ -43,7 +43,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
     if (provider === 'GOOGLE') {
       const clientId = await getGoogleClientId();
       if (!clientId || clientId.trim() === '' || clientId.includes('YOUR_GOOGLE_CLIENT_ID')) {
-        setErrorMsg('GOOGLE_CLIENT_ID is not configured in build or server environment variables.');
+        setErrorMsg('Google Sign-In requires GOOGLE_CLIENT_ID. Configure VITE_GOOGLE_CLIENT_ID in Cloudflare Workers settings or GOOGLE_CLIENT_ID on Render.');
         setIsLoading(false);
         return;
       }
@@ -91,25 +91,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
     }
 
     try {
-      // Simulate real OAuth popup return with unique user identity per login for other providers
       const uniqueId = Math.floor(1000 + Math.random() * 9000);
-      const dynamicEmail = provider === 'MICROSOFT'
-        ? `outlook.user.${uniqueId}@outlook.com`
-        : provider === 'ZOHO'
-        ? `zoho.user.${uniqueId}@zoho.com`
-        : `apple.user.${uniqueId}@privaterelay.appleid.com`;
-
-      const dynamicName = provider === 'MICROSOFT'
-        ? `Microsoft User ${uniqueId}`
-        : provider === 'ZOHO'
-        ? `Zoho User ${uniqueId}`
-        : `Apple User ${uniqueId}`;
+      const dynamicEmail = `zoho.user.${uniqueId}@zoho.com`;
+      const dynamicName = `Zoho User ${uniqueId}`;
 
       const session = await loginWithOAuthProvider(provider, dynamicEmail, dynamicName);
       setPendingSession(session);
 
-      if (provider === 'MICROSOFT' || provider === 'ZOHO') {
-        setSelectedMailboxProvider(provider === 'MICROSOFT' ? 'MICROSOFT' : 'ZOHO');
+      if (provider === 'ZOHO') {
+        setSelectedMailboxProvider('ZOHO');
         setMode('GRANT_MAILBOX');
         setIsLoading(false);
       } else {
@@ -195,7 +185,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
 
             <div className="space-y-2">
               <span className="font-bold text-slate-300 block text-[11px] uppercase tracking-wider">Select Mailbox Provider</span>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setSelectedMailboxProvider('GMAIL')}
@@ -207,19 +197,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
                 >
                   <GoogleLogo className="w-5 h-5" />
                   <span className="text-[11px] font-bold">Gmail</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedMailboxProvider('MICROSOFT')}
-                  className={`p-3 rounded-xl border flex flex-col items-center justify-center space-y-1.5 transition-all ${
-                    selectedMailboxProvider === 'MICROSOFT'
-                      ? 'border-[#f5b82e] bg-[#1d2136] text-white shadow-lg'
-                      : 'border-[#25293d] bg-[#141624] text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <MicrosoftLogo className="w-5 h-5" />
-                  <span className="text-[11px] font-bold">Outlook</span>
                 </button>
 
                 <button
@@ -262,7 +239,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
           </div>
         ) : (
           <>
-            {/* Multi-Provider Login Buttons with Official Brand SVGs */}
+            {/* Multi-Provider Login Buttons */}
             {mode === 'LOGIN' && (
               <div className="space-y-2.5">
                 <button
@@ -276,31 +253,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
 
                 <button
                   type="button"
-                  onClick={() => handleOAuthSignIn('MICROSOFT')}
+                  onClick={() => handleOAuthSignIn('ZOHO')}
                   className="w-full py-2.5 px-4 rounded-xl bg-[#181b2c] hover:bg-[#20253d] border border-[#2c324e] text-white font-bold text-xs flex items-center justify-center space-x-2.5 transition-all shadow-md"
                 >
-                  <MicrosoftLogo className="w-4 h-4" />
-                  <span>Continue with Microsoft</span>
+                  <ZohoLogo className="w-5 h-3" />
+                  <span>Continue with Zoho</span>
                 </button>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleOAuthSignIn('APPLE')}
-                    className="py-2.5 px-3 rounded-xl bg-[#181b2c] hover:bg-[#20253d] border border-[#2c324e] text-white font-bold text-xs flex items-center justify-center space-x-2"
-                  >
-                    <AppleLogo className="w-4 h-4" />
-                    <span>Continue with Apple</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOAuthSignIn('ZOHO')}
-                    className="py-2.5 px-3 rounded-xl bg-[#181b2c] hover:bg-[#20253d] border border-[#2c324e] text-white font-bold text-xs flex items-center justify-center space-x-2"
-                  >
-                    <ZohoLogo className="w-5 h-3" />
-                    <span>Continue with Zoho</span>
-                  </button>
-                </div>
 
                 <div className="relative py-2 flex items-center justify-center">
                   <div className="border-t border-[#23273d] w-full" />
@@ -414,7 +372,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
 
             {/* Test Account Quick-Select (Dev Only) */}
             {IS_DEV && (
-              <div className="p-3 rounded-2xl bg-[#161928] border border-[#272c44] text-[11px] space-y-1.5">
+              <div className="p-[#161928] border border-[#272c44] text-[11px] space-y-1.5 rounded-2xl p-3">
                 <span className="text-slate-400 font-bold block uppercase text-[10px]">Development Test Accounts</span>
                 <div className="grid grid-cols-2 gap-2">
                   <button

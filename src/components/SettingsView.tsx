@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Lead } from '../types/lead';
 import { ZohoMailConfigStatus } from '../types/email';
-import { GoogleLogo, MicrosoftLogo, AppleLogo, ZohoLogo } from './ProviderLogos';
+import { GoogleLogo, ZohoLogo } from './ProviderLogos';
 import {
   getGoogleAppsScriptCode,
   downloadCsv,
@@ -286,28 +286,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               <div className="p-3.5 rounded-xl bg-[#141624] border border-[#22273c] flex items-center justify-between">
                 <div className="flex items-center space-x-2.5">
-                  <MicrosoftLogo className="w-4 h-4" />
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-white block">Microsoft</span>
-                    <span className="text-[10px] text-slate-400 font-semibold">— Available to Link</span>
-                  </div>
-                </div>
-                <button className="text-[11px] font-bold text-[#f5b82e] hover:underline">+ Link</button>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#141624] border border-[#22273c] flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
-                  <AppleLogo className="w-4 h-4" />
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-white block">Apple</span>
-                    <span className="text-[10px] text-slate-400 font-semibold">— Available to Link</span>
-                  </div>
-                </div>
-                <button className="text-[11px] font-bold text-[#f5b82e] hover:underline">+ Link</button>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#141624] border border-[#22273c] flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
                   <ZohoLogo className="w-5 h-3" />
                   <div className="space-y-0.5">
                     <span className="font-bold text-white block">Zoho</span>
@@ -372,18 +350,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <p className="text-slate-400">Connect Google Workspace OAuth for automated sending & replies</p>
               </div>
 
-              <div className="p-4 rounded-xl bg-[#141624] border border-[#22273c] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <MicrosoftLogo className="w-4 h-4" />
-                    <span className="font-bold text-white">Outlook / Microsoft 365</span>
-                  </div>
-                  <button className="px-3 py-1 rounded-lg bg-[#1e2338] text-[#f5b82e] hover:bg-[#272d47] font-bold text-[11px]">
-                    + Connect Outlook
-                  </button>
-                </div>
-                <p className="text-slate-400">Connect Outlook/Office365 mailbox via Microsoft Graph</p>
-              </div>
+
 
               <div className="p-4 rounded-xl bg-[#141624] border border-[#22273c] space-y-2">
                 <div className="flex items-center justify-between">

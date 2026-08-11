@@ -54,19 +54,17 @@ async function runUnifiedAuthPricingTests() {
   console.log(`   Result: ${t3 ? 'PASS' : 'FAIL'}`);
   if (t3) passed++;
 
-  // 4. OAuth Provider Authentication Test (Google, Microsoft, Apple, Zoho, Email)
+  // 4. OAuth & Email Provider Authentication Test (Google, Zoho, Email)
   console.log("\n4. OAuth Provider Identity Authentication Check:");
   const googleSess = await loginWithOAuthProvider('GOOGLE', 'testuser@google.com');
-  const msSess = await loginWithOAuthProvider('MICROSOFT', 'testuser@microsoft.com');
-  const appleSess = await loginWithOAuthProvider('APPLE', 'testuser@apple.com');
   const zohoSess = await loginWithOAuthProvider('ZOHO', 'testuser@zoho.com');
+  const emailSess = await loginWithOAuthProvider('EMAIL', 'testuser@email.com');
 
   console.log(`   - Google Auth User: ${googleSess.user.email}`);
-  console.log(`   - Microsoft Auth User: ${msSess.user.email}`);
-  console.log(`   - Apple Auth User: ${appleSess.user.email}`);
   console.log(`   - Zoho Auth User: ${zohoSess.user.email}`);
+  console.log(`   - Email Auth User: ${emailSess.user.email}`);
 
-  const t4 = (googleSess && msSess && appleSess && zohoSess);
+  const t4 = (googleSess && zohoSess && emailSess);
   console.log(`   Result: ${t4 ? 'PASS' : 'FAIL'}`);
   if (t4) passed++;
 

@@ -2,7 +2,8 @@
  * Cloudflare Worker Entry point:
  * 1. Proxies /api/* requests to production backend API_ORIGIN (configured via Cloudflare environment variables)
  * 2. Serves static assets from ./dist via env.ASSETS binding
- * 3. Fallback to /index.html for SPA routing
+ * 3. Injects runtime config (window.__AMUSEMAC_CONFIG__) into HTML responses if Cloudflare env variables are set
+ * 4. Fallback to /index.html for SPA routing
  */
 export default {
   async fetch(request, env, ctx) {
@@ -64,17 +65,41 @@ export default {
       }
     }
 
+    // Helper: Inject runtime config window.__AMUSEMAC_CONFIG__ into HTML responses
+    const googleClientId = env.VITE_GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '';
+    const injectRuntimeConfig = async (assetResponse) => {
+      const contentType = assetResponse.headers.get('content-type') || '';
+      if (googleClientId && contentType.includes('text/html')) {
+        let html = await assetResponse.text();
+        const configScript = `<script>window.__AMUSEMAC_CONFIG__={GOOGLE_CLIENT_ID:${JSON.stringify(googleClientId)}};</script>`;
+        if (html.includes('</head>')) {
+          html = html.replace('</head>', `${configScript}</head>`);
+        } else {
+          html = configScript + html;
+        }
+        const newHeaders = new Headers(assetResponse.headers);
+        newHeaders.delete('content-length');
+        return new Response(html, {
+          status: assetResponse.status,
+          statusText: assetResponse.statusText,
+          headers: newHeaders
+        });
+      }
+      return assetResponse;
+    };
+
     // 2. Static Assets & SPA Fallback
     try {
       if (env.ASSETS) {
         const assetResponse = await env.ASSETS.fetch(request);
         if (assetResponse.status !== 404) {
-          return assetResponse;
+          return await injectRuntimeConfig(assetResponse);
         }
 
         // SPA Fallback: for non-API non-asset paths, return index.html
         const indexUrl = new URL('/index.html', request.url);
-        return await env.ASSETS.fetch(indexUrl);
+        const indexResponse = await env.ASSETS.fetch(indexUrl);
+        return await injectRuntimeConfig(indexResponse);
       }
     } catch (e) {}
 

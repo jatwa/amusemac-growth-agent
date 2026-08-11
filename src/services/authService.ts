@@ -286,7 +286,7 @@ export async function verifyGoogleAuthWithBackend(idToken: string): Promise<Auth
 }
 
 /**
- * Authenticates user via OAuth Provider (Google, Microsoft, Apple, Zoho)
+ * Authenticates user via OAuth Provider (Google, Zoho)
  */
 export async function loginWithOAuthProvider(
   provider: AuthProviderType,

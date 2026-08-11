@@ -171,7 +171,7 @@ export const OutreachView: React.FC<OutreachViewProps> = ({
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>
-                  <strong>Mailbox Not Connected:</strong> Connect your sending mailbox (Gmail, Microsoft, Zoho, Apple) to send emails directly from {activeOrg?.companyName || 'your workspace'}.
+                  <strong>Mailbox Not Connected:</strong> Connect your sending mailbox (Gmail, Zoho Mail) to send emails directly from {activeOrg?.companyName || 'your workspace'}.
                 </span>
               </div>
               <button

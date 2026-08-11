@@ -34,31 +34,31 @@ async function runAuthLogosUxVerification() {
   console.log(`   Result: ${t3 ? 'PASS' : 'FAIL'}`);
   if (t3) passedCount++;
 
-  // 4. Microsoft Login Test
-  console.log("\n4. Microsoft Login Test:");
-  const msUser = await loginWithOAuthProvider('MICROSOFT', 'alex@outlook.com', 'Alex Microsoft');
-  console.log(`   - Microsoft Auth Email: ${msUser.user.email}`);
-  const t4 = (msUser.user.email === 'alex@outlook.com');
+  // 4. Zoho Login Test
+  console.log("\n4. Zoho Login Test:");
+  const zohoUser = await loginWithOAuthProvider('ZOHO', 'alex@zoho.com', 'Alex Zoho');
+  console.log(`   - Zoho Auth Email: ${zohoUser.user.email}`);
+  const t4 = (zohoUser.user.email === 'alex@zoho.com');
   console.log(`   Result: ${t4 ? 'PASS' : 'FAIL'}`);
   if (t4) passedCount++;
 
-  // 5. Apple Login Test (Auth separate from Mail)
-  console.log("\n5. Apple Login Test:");
-  const appleUser = await loginWithOAuthProvider('APPLE', 'user@privaterelay.appleid.com', 'Apple User');
-  console.log(`   - Apple Auth Email: ${appleUser.user.email}`);
-  const t5 = (appleUser.user.email === 'user@privaterelay.appleid.com');
+  // 5. Work Email Auth Test
+  console.log("\n5. Work Email Auth Test:");
+  const emailUser = await loginUser('admin@amusemacstudio.in', 'Admin@123');
+  console.log(`   - Work Email Authenticated: ${emailUser.user.email}`);
+  const t5 = (emailUser.user.email === 'admin@amusemacstudio.in');
   console.log(`   Result: ${t5 ? 'PASS' : 'FAIL'}`);
   if (t5) passedCount++;
 
   // 6. Zoho Auth & Existing Users Preservation
   console.log("\n6. Existing Zoho Users Preservation Test:");
   const superAdmin = INITIAL_USERS.find(u => u.email === 'admin@amusemacstudio.in');
-  const zohoUser = INITIAL_USERS.find(u => u.email === 'hello@amusemacstudio.in');
+  const existingZohoUser = INITIAL_USERS.find(u => u.email === 'hello@amusemacstudio.in');
   const amuseMailboxes = getOrgMailboxes('amusemac-studio');
 
   console.log(`   - Super Admin Present: ${Boolean(superAdmin)}`);
   console.log(`   - Existing Zoho Mailbox Preserved: ${amuseMailboxes.length > 0 && amuseMailboxes[0].provider === 'ZOHO'}`);
-  const t6 = Boolean(superAdmin && zohoUser && amuseMailboxes.length > 0);
+  const t6 = Boolean(superAdmin && existingZohoUser && amuseMailboxes.length > 0);
   console.log(`   Result: ${t6 ? 'PASS' : 'FAIL'}`);
   if (t6) passedCount++;
 

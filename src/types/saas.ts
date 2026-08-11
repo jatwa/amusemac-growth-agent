@@ -6,7 +6,7 @@ export type PlanId = 'FREE' | 'LITE' | 'PRO' | 'MAX' | 'ENTERPRISE';
 
 export type EmailProviderType = 'ZOHO' | 'GMAIL' | 'MICROSOFT' | 'APPLE_MAIL' | 'CUSTOM_SMTP';
 
-export type AuthProviderType = 'GOOGLE' | 'MICROSOFT' | 'APPLE' | 'ZOHO' | 'EMAIL';
+export type AuthProviderType = 'GOOGLE' | 'ZOHO' | 'EMAIL';
 
 export interface AuthIdentity {
   identityId: string;

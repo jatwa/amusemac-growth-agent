@@ -34,11 +34,11 @@ async function runMasterProductionVerificationTests() {
   console.log(`   - Result: ${t1Passed ? 'PASS' : 'FAIL'}`);
   if (t1Passed) passed++;
 
-  // TEST 2: Fresh Microsoft Customer
-  console.log("\nTEST 2 — Fresh Microsoft Customer:");
+  // TEST 2: Fresh Customer Zoho Login
+  console.log("\nTEST 2 — Fresh Zoho Customer:");
   logoutUser();
-  const email2 = `ms.test.${Date.now()}@outlook.com`;
-  const sess2 = await loginWithOAuthProvider('MICROSOFT', email2, 'Microsoft Customer');
+  const email2 = `zoho.test.${Date.now()}@zoho.com`;
+  const sess2 = await loginWithOAuthProvider('ZOHO', email2, 'Zoho Customer');
   const t2Passed = (
     sess2.organization.orgId.startsWith('org-cust-') &&
     sess2.organization.planId === 'FREE' &&
@@ -48,11 +48,11 @@ async function runMasterProductionVerificationTests() {
   console.log(`   - Result: ${t2Passed ? 'PASS' : 'FAIL'}`);
   if (t2Passed) passed++;
 
-  // TEST 3: Fresh Apple Customer
-  console.log("\nTEST 3 — Fresh Apple Customer:");
+  // TEST 3: Fresh Customer Email Signup
+  console.log("\nTEST 3 — Fresh Email Customer:");
   logoutUser();
-  const email3 = `apple.test.${Date.now()}@privaterelay.appleid.com`;
-  const sess3 = await loginWithOAuthProvider('APPLE', email3, 'Apple Customer');
+  const email3 = `email.test.${Date.now()}@acme.com`;
+  const sess3 = await loginWithOAuthProvider('EMAIL', email3, 'Email Customer');
   const t3Passed = (
     sess3.organization.orgId.startsWith('org-cust-') &&
     sess3.organization.planId === 'FREE' &&
