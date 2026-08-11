@@ -34,11 +34,14 @@ import {
   moveEmailToTrash
 } from '../services/apiMailService';
 
+import { Organization } from '../types/saas';
+
 interface EmailInboxViewProps {
   leads: Lead[];
   onSelectLead: (lead: Lead) => void;
   onUpdateLeadStatus: (leadId: string, status: SalesStatus) => void;
   onUpdateLeadDetails: (leadId: string, updates: Partial<Lead>) => void;
+  activeOrg?: Organization;
 }
 
 type MailFolder = 'inbox' | 'sent' | 'threads' | 'unassigned' | 'drafts' | 'trash';
@@ -47,7 +50,8 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
   leads,
   onSelectLead,
   onUpdateLeadStatus,
-  onUpdateLeadDetails
+  onUpdateLeadDetails,
+  activeOrg
 }) => {
   const [activeFolder, setActiveFolder] = useState<MailFolder>('inbox');
   const [emailLogs, setEmailLogs] = useState<EmailMessage[]>([]);
@@ -159,8 +163,8 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
     } else {
       setCurrentDraftId(null);
       const tpl = REUSABLE_EMAIL_TEMPLATES.find(t => t.id === composerTemplateId) || REUSABLE_EMAIL_TEMPLATES[0];
-      setComposerSubject(populateTemplateVariables(tpl.subjectTemplate, lead));
-      setComposerBody(populateTemplateVariables(tpl.bodyTemplate, lead));
+      setComposerSubject(populateTemplateVariables(tpl.subjectTemplate, lead, activeOrg));
+      setComposerBody(populateTemplateVariables(tpl.bodyTemplate, lead, activeOrg));
       setComposerAttachments([]);
     }
 
@@ -172,8 +176,8 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
     const tpl = REUSABLE_EMAIL_TEMPLATES.find(t => t.id === tplId);
     const lead = leads.find(l => l.leadId === composerLeadId) || currentLead;
     if (tpl) {
-      setComposerSubject(populateTemplateVariables(tpl.subjectTemplate, lead));
-      setComposerBody(populateTemplateVariables(tpl.bodyTemplate, lead));
+      setComposerSubject(populateTemplateVariables(tpl.subjectTemplate, lead, activeOrg));
+      setComposerBody(populateTemplateVariables(tpl.bodyTemplate, lead, activeOrg));
     }
   };
 

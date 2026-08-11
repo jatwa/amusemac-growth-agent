@@ -1,4 +1,5 @@
 import { Lead, AmusemacService, LeadPriority, ScoreTier, OutreachChannel, OutreachPackage, CompetitorStatus, BuyingSignalType, ScoreBreakdown } from '../types/lead';
+import { Organization } from '../types/saas';
 
 /**
  * Calculates contactability score (0-100) based on verified public information
@@ -18,19 +19,21 @@ export function calculateContactabilityScore(lead: Partial<Lead>): number {
 }
 
 /**
- * Determines relevant Amusemac services for a business project need
+ * Determines relevant services for a business project need based on active organization profile
  */
 export function determineServiceMatch(
   industry: string,
   businessDescription: string,
   serviceNeed: string,
-  userSelectedServices?: AmusemacService[]
+  userSelectedServices?: AmusemacService[],
+  org?: Organization
 ): {
   primaryService: AmusemacService;
   secondaryServices: AmusemacService[];
   matchScore: number;
   rationale: string;
 } {
+  const isAmusemac = !org || org.orgId === 'amusemac-studio';
   const desc = (businessDescription + ' ' + industry + ' ' + serviceNeed).toLowerCase();
   
   if (userSelectedServices && userSelectedServices.length > 0) {
@@ -44,7 +47,17 @@ export function determineServiceMatch(
     };
   }
 
-  // Need-based matching heuristics
+  if (!isAmusemac) {
+    const defaultCustService = 'Commercial Strategy & Outreach';
+    return {
+      primaryService: defaultCustService,
+      secondaryServices: ['Brand Campaign Execution', 'Digital Strategy'],
+      matchScore: 90,
+      rationale: `Matched based on ${org?.companyName || 'Client'}'s core service offerings for ${industry} clients.`
+    };
+  }
+
+  // Amusemac Need-based matching heuristics
   if (desc.includes('set design') || desc.includes('art direction') || desc.includes('production design') || desc.includes('set build')) {
     return {
       primaryService: 'Production Design',
@@ -90,7 +103,6 @@ export function determineServiceMatch(
     };
   }
 
-  // Default End-to-End Creative Execution
   return {
     primaryService: 'End-to-End Creative Execution',
     secondaryServices: ['Creative Production', 'Commercial/Ad Film Production', 'Art Direction'],
@@ -115,28 +127,17 @@ export function calculateAiLeadScore(lead: Partial<Lead>): {
   const hasDecisionMaker = lead.decisionMakerName && lead.decisionMakerName !== 'Not found';
   const location = lead.location || '';
 
-  // Factor 1: ICP Fit (Max 20 pts)
   const icpFitScore = competitorStatus === 'EXCLUDED_COMPETITOR' ? 0 : 20;
-
-  // Factor 2: Service Fit (Max 20 pts)
   const serviceFitScore = lead.serviceMatchScore ? Math.round((lead.serviceMatchScore / 100) * 20) : 18;
-
-  // Factor 3: Buyer Fit (Max 15 pts)
   const buyerFitScore = competitorStatus === 'CLIENT_END_USER' ? 15 : 10;
 
-  // Factor 4: Buying Signal Strength (Max 20 pts)
   let buyingSignalScore = 14;
   if (signalType === 'RFP_VENDOR_CALL' || signalType === 'NEW_PRODUCT_LAUNCH') buyingSignalScore = 20;
   else if (signalType === 'SEASONAL_FESTIVE_CAMPAIGN' || signalType === 'CAMPAIGN_ANNOUNCEMENT') buyingSignalScore = 18;
   else if (signalType === 'FUNDING_RAISED' || signalType === 'EXPANSION_SIGNAL') buyingSignalScore = 16;
 
-  // Factor 5: Location Fit (Max 10 pts)
   const locationFitScore = (location.toLowerCase().includes('mumbai') || location.toLowerCase().includes('bengaluru') || location.toLowerCase().includes('delhi')) ? 10 : 7;
-
-  // Factor 6: Company Profile Fit (Max 10 pts)
   const companyFitScore = 9;
-
-  // Factor 7: Contact Quality & Decision Maker (Max 5 pts)
   const contactQualityScore = hasDecisionMaker ? 5 : (lead.email && lead.email !== 'Not found' ? 3 : 2);
 
   const totalScore = Math.min(100, icpFitScore + serviceFitScore + buyerFitScore + buyingSignalScore + locationFitScore + companyFitScore + contactQualityScore);
@@ -189,57 +190,104 @@ export function calculateAiLeadScore(lead: Partial<Lead>): {
 }
 
 /**
- * Generates personalized 8-part outreach message package anchored on the specific project name & current need
+ * Generates personalized 8-part outreach message package anchored on the specific project & current need with strict tenant isolation
  */
-export function generateOutreachPackage(lead: Partial<Lead>): OutreachPackage {
+export function generateOutreachPackage(lead: Partial<Lead>, org?: Organization): OutreachPackage {
   const company = lead.companyName || 'your team';
   const project = lead.projectName || 'upcoming campaign';
-  const need = lead.serviceNeed || 'commercial video production';
+  const need = lead.serviceNeed || 'commercial requirements';
   const person = lead.decisionMakerName && lead.decisionMakerName !== 'Not found' ? lead.decisionMakerName : 'Team';
   const role = lead.decisionMakerDesignation && lead.decisionMakerDesignation !== 'Not found' ? lead.decisionMakerDesignation : 'Leadership';
-  const primaryService = lead.primaryService || 'Commercial/Ad Film Production';
-  const location = lead.location && lead.location !== 'Not found' ? lead.location : 'your region';
 
-  return {
-    emailSubject: `Regarding ${company}'s ${project} — Amusemac Studio Production Proposal`,
-    personalizedEmail: `Hi ${person},
+  const isAmusemac = !org || org.orgId === 'amusemac-studio';
 
-I saw ${company}'s public announcement regarding the "${project}" and noticed your active requirement for ${need}.
+  if (isAmusemac) {
+    const primaryService = lead.primaryService || 'Commercial/Ad Film Production';
+    return {
+      emailSubject: `Regarding ${company}'s ${project} — Amusemac Studio Production Proposal`,
+      personalizedEmail: `Hi ${person},
 
-At Amusemac Studio (MAD ABOUT CINEMA), we specialize in ${primaryService}, Production Design, and End-to-End Creative Execution for high-stakes brand campaigns.
+I came across ${company}'s public announcement regarding the "${project}" and noticed the opportunity around film production.
 
-We have turnkey line production teams and soundstage set designers ready to support the "${project}" shoot schedule without operational delay.
+At Amusemac Studio (MAD ABOUT CINEMA), we specialize in Production Design and end-to-end creative execution for brand and commercial campaigns.
 
-Would you be open to a 10-minute discovery call next Tuesday or Wednesday to discuss production design and line execution for this project?
+We'd be happy to explore how our production and creative capabilities could support the project.
+
+Would you be open to a short 10-minute conversation next Tuesday or Wednesday?
 
 Best regards,
 
-Business Development Team
+Kuldeep Jatwa
+Production Designer & Creative Producer
 Amusemac Studio | MAD ABOUT CINEMA
-https://amusemac.com`,
 
-    linkedinConnection: `Hi ${person}, saw ${company}'s announcement for "${project}". Amusemac Studio produces cinema-grade ${primaryService} & Production Design. Would love to connect and share visual concepts for this brief.`,
+Production Design Portfolio:
+https://vimeo.com/1123277739?fl=pl&fe=sh
 
-    linkedinFollowup: `Thanks for connecting, ${person}! Quick follow-up regarding "${project}": We can handle turnkey set design and line production for your shoot dates. Open to taking a look at our relevant portfolio deck?`,
+Amusemac Studio:
+https://www.amusemacstudio.in`,
 
-    whatsappMessage: `Hi ${person}, this is Amusemac Studio (MAD ABOUT CINEMA). Re: ${company}'s "${project}" — we specialize in ${primaryService} and custom set design. Are you currently finalizing external production vendors for this brief?`,
+      linkedinConnection: `Hi ${person}, saw ${company}'s announcement for "${project}". Amusemac Studio produces cinema-grade ${primaryService} & Production Design. Would love to connect and share visual concepts for this brief.`,
 
-    shortIntroPitch: `${company} ("${project}") + Amusemac Studio: TV Commercial-grade ${primaryService}, bespoke production design, and end-to-end line execution built specifically for your upcoming shoot.`,
+      linkedinFollowup: `Thanks for connecting, ${person}! Quick follow-up regarding "${project}": We can handle turnkey set design and line production for your shoot dates. Check out our portfolio: https://vimeo.com/1123277739?fl=pl&fe=sh`,
 
-    followupMessage1: `Hi ${person}, following up regarding the production brief for "${project}". We recently wrapped a similar ${primaryService} shoot—happy to send over a 60-second visual breakdown tailored for ${company}. Do you have 5 minutes this week?`,
+      whatsappMessage: `Hi ${person}, this is Kuldeep Jatwa from Amusemac Studio (MAD ABOUT CINEMA). Re: ${company}'s "${project}" — we specialize in ${primaryService} and custom set design. Are you currently finalizing external production vendors for this brief?`,
 
-    followupMessage2: `Hi ${person}, last check-in from my side regarding "${project}"! If ${company} is still evaluating external production vendors or art direction teams for this brief, we'd be glad to submit a formal bid. Best regards!`
+      shortIntroPitch: `${company} ("${project}") + Amusemac Studio: TV Commercial-grade ${primaryService}, bespoke production design, and end-to-end line execution built specifically for your upcoming shoot.`,
+
+      followupMessage1: `Hi ${person}, following up regarding the production brief for "${project}". We recently wrapped a similar ${primaryService} shoot—happy to send over a visual breakdown. Do you have 5 minutes this week?`,
+
+      followupMessage2: `Hi ${person}, last check-in from my side regarding "${project}"! If ${company} is still evaluating external production vendors or art direction teams for this brief, we'd be glad to submit a formal bid. Best regards!`
+    };
+  }
+
+  // CUSTOMER WORKSPACE OUTREACH GENERATION (STRICT ISOLATION)
+  const custCompany = org.companyName || 'Client Workspace';
+  const custAdmin = org.adminName || 'Team';
+  const custRole = 'Founder & Director';
+  const custWebsite = org.website && org.website !== 'https://' && org.website !== 'Not configured' ? org.website : '';
+  const custService = lead.primaryService && lead.primaryService !== 'Commercial/Ad Film Production' ? lead.primaryService : 'our specialized services';
+
+  let signatureLines = `Best regards,\n\n${custAdmin}\n${custRole}\n${custCompany}`;
+  if (custWebsite) {
+    signatureLines += `\n\n${custWebsite}`;
+  }
+
+  return {
+    emailSubject: `Regarding ${company}'s ${project} — ${custCompany} Proposal`,
+    personalizedEmail: `Hi ${person},
+
+I came across ${company}'s recent campaign activity regarding "${project}" and noticed the opportunity around ${need}.
+
+At ${custCompany}, we specialize in ${custService} and would be happy to explore how we could support the campaign.
+
+Would you be open to a short conversation next week?
+
+${signatureLines}`,
+
+    linkedinConnection: `Hi ${person}, saw ${company}'s recent updates regarding "${project}". At ${custCompany}, we specialize in ${custService}. Would love to connect!`,
+
+    linkedinFollowup: `Thanks for connecting, ${person}! Quick follow-up regarding "${project}": ${custCompany} provides specialized ${custService}. Let us know if you're open to a brief touchpoint.`,
+
+    whatsappMessage: `Hi ${person}, this is ${custAdmin} from ${custCompany}. Re: ${company}'s "${project}" — we specialize in ${custService}. Are you currently exploring partners for this campaign?`,
+
+    shortIntroPitch: `${company} ("${project}") + ${custCompany}: ${custService} tailored specifically for your campaign goals.`,
+
+    followupMessage1: `Hi ${person}, following up regarding ${company}'s "${project}". We'd love to share how ${custCompany} can support your team with ${custService}. Do you have 5 minutes this week?`,
+
+    followupMessage2: `Hi ${person}, last check-in regarding "${project}"! If ${company} is evaluating external partners for ${custService}, we'd be glad to share more details. Best regards!`
   };
 }
 
 /**
  * Recommends the optimal outreach strategy
  */
-export function recommendOutreachStrategy(lead: Partial<Lead>): {
+export function recommendOutreachStrategy(lead: Partial<Lead>, org?: Organization): {
   recommendedChannel: OutreachChannel;
   bestRole: string;
   pitchAngle: string;
 } {
+  const isAmusemac = !org || org.orgId === 'amusemac-studio';
   const hasEmail = lead.email && lead.email !== 'Not found';
   const hasLinkedin = lead.linkedin && lead.linkedin !== 'Not found';
   const hasPhone = lead.phone && lead.phone !== 'Not found';
@@ -254,7 +302,8 @@ export function recommendOutreachStrategy(lead: Partial<Lead>): {
     ? lead.decisionMakerDesignation
     : 'Creative Director / Marketing Head';
 
-  const pitchAngle = `Position Amusemac Studio's ${lead.primaryService} as the turnkey execution partner for "${lead.projectName || 'the current campaign'}", addressing their exact need for ${lead.serviceNeed || 'commercial film production'}.`;
+  const companyTitle = isAmusemac ? "Amusemac Studio's" : `${org?.companyName || 'Client'}'s`;
+  const pitchAngle = `Position ${companyTitle} ${lead.primaryService || 'capabilities'} as the execution partner for "${lead.projectName || 'the current campaign'}", addressing their exact need for ${lead.serviceNeed || 'commercial services'}.`;
 
   return { recommendedChannel, bestRole, pitchAngle };
 }

@@ -17,9 +17,10 @@ Would you be open to a 10-minute discovery call next Tuesday or Wednesday?
 
 Best regards,
 
-Business Development Team
+{{sender_admin}}
+{{sender_role}}
 {{sender_company}}
-{{sender_email}}`
+{{sender_website}}`
   },
   {
     id: 'followup-1',
@@ -35,9 +36,10 @@ Do you have 5 minutes this week for a brief touchpoint?
 
 Best regards,
 
-Business Development Team
+{{sender_admin}}
+{{sender_role}}
 {{sender_company}}
-{{sender_email}}`
+{{sender_website}}`
   },
   {
     id: 'followup-2',
@@ -51,9 +53,10 @@ Otherwise, I'll touch base next quarter!
 
 Best regards,
 
-Business Development Team
+{{sender_admin}}
+{{sender_role}}
 {{sender_company}}
-{{sender_email}}`
+{{sender_website}}`
   },
   {
     id: 'meeting-request',
@@ -69,8 +72,10 @@ Are you available this Thursday at 2:00 PM or Friday at 11:00 AM?
 
 Warm regards,
 
-{{sender_company}} Team
-{{sender_email}}`
+{{sender_admin}}
+{{sender_role}}
+{{sender_company}}
+{{sender_website}}`
   },
   {
     id: 'proposal-followup',
@@ -84,8 +89,10 @@ Have you or your team had a chance to review the scope? I'd be happy to answer a
 
 Best regards,
 
-{{sender_company}} Team
-{{sender_email}}`
+{{sender_admin}}
+{{sender_role}}
+{{sender_company}}
+{{sender_website}}`
   },
   {
     id: 'thank-you',
@@ -101,20 +108,21 @@ Looking forward to collaborating!
 
 Warm regards,
 
-Business Development Team
+{{sender_admin}}
+{{sender_role}}
 {{sender_company}}
-{{sender_email}}`
+{{sender_website}}`
   },
   {
     id: 'custom',
     name: 'Custom Email',
     subjectTemplate: 'Message for {{company_name}}',
-    bodyTemplate: `Hi {{contact_name}},\n\n[Write your custom message here]\n\nBest regards,\n{{sender_company}}\n{{sender_email}}`
+    bodyTemplate: `Hi {{contact_name}},\n\n[Write your custom message here]\n\nBest regards,\n{{sender_admin}}\n{{sender_role}}\n{{sender_company}}\n{{sender_website}}`
   }
 ];
 
 /**
- * Replaces dynamic variables in subject and body templates with verified lead and org data
+ * Replaces dynamic variables in subject and body templates with strict tenant isolation
  */
 export function populateTemplateVariables(templateStr: string, lead?: Partial<Lead>, org?: Organization): string {
   if (!templateStr) return '';
@@ -125,8 +133,31 @@ export function populateTemplateVariables(templateStr: string, lead?: Partial<Le
   const location = lead?.location && lead.location !== 'Not found' ? lead.location : 'your region';
   const reason = lead?.priorityReason || lead?.whyThisLead || `${company} has strong prospective interest.`;
 
-  const senderCompany = org?.companyName || 'Our Business';
-  const senderEmail = org?.adminEmail || org?.emailConfig?.email || 'outreach@company.com';
+  const isAmusemac = org?.orgId === 'amusemac-studio';
+
+  const senderCompany = isAmusemac
+    ? 'Amusemac Studio'
+    : (org?.companyName || 'Client Workspace');
+
+  const senderAdmin = isAmusemac
+    ? 'Kuldeep Jatwa'
+    : (org?.adminName || 'Team');
+
+  const senderRole = isAmusemac
+    ? 'Production Designer & Creative Producer'
+    : 'Founder & Director';
+
+  const senderEmail = isAmusemac
+    ? 'hello@amusemacstudio.in'
+    : (org?.adminEmail || org?.emailConfig?.email || 'outreach@company.com');
+
+  const senderWebsite = isAmusemac
+    ? 'https://www.amusemacstudio.in'
+    : (org?.website && org.website !== 'https://' && org.website !== 'Not configured' ? org.website : '');
+
+  const senderPortfolio = isAmusemac
+    ? 'https://vimeo.com/1123277739?fl=pl&fe=sh'
+    : '';
 
   let result = templateStr
     .replace(/\{\{company_name\}\}/g, company)
@@ -135,15 +166,23 @@ export function populateTemplateVariables(templateStr: string, lead?: Partial<Le
     .replace(/\{\{location\}\}/g, location)
     .replace(/\{\{reason_this_lead_is_relevant\}\}/g, reason)
     .replace(/\{\{sender_company\}\}/g, senderCompany)
-    .replace(/\{\{sender_email\}\}/g, senderEmail);
+    .replace(/\{\{sender_admin\}\}/g, senderAdmin)
+    .replace(/\{\{sender_role\}\}/g, senderRole)
+    .replace(/\{\{sender_email\}\}/g, senderEmail)
+    .replace(/\{\{sender_website\}\}/g, senderWebsite);
 
-  if (org && org.orgId !== 'amusemac-studio') {
+  // Strict tenant boundary enforcement
+  if (!isAmusemac) {
     result = result
+      .replace(/Kuldeep Jatwa/g, senderAdmin)
+      .replace(/Production Designer & Creative Producer/g, senderRole)
       .replace(/Amusemac Studio \| MAD ABOUT CINEMA/g, senderCompany)
       .replace(/Amusemac Studio \(MAD ABOUT CINEMA\)/g, senderCompany)
       .replace(/Amusemac Studio/g, senderCompany)
-      .replace(/hello@amusemacstudio.in/g, senderEmail)
-      .replace(/https:\/\/amusemac\.com/g, org.website || 'https://');
+      .replace(/hello@amusemacstudio\.in/g, senderEmail)
+      .replace(/https:\/\/www\.amusemacstudio\.in/g, senderWebsite)
+      .replace(/https:\/\/vimeo\.com\/1123277739\?fl=pl&fe=sh/g, senderPortfolio)
+      .replace(/https:\/\/amusemac\.com/g, senderWebsite);
   }
 
   return result;

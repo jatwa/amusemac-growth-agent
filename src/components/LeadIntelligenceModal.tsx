@@ -21,17 +21,21 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { Lead } from '../types/lead';
+import { Organization } from '../types/saas';
+import { generateOutreachPackage } from '../services/aiScoring';
 
 interface LeadIntelligenceModalProps {
   lead: Lead | null;
   onClose: () => void;
   onOpenCompose: (lead: Lead) => void;
+  activeOrg?: Organization;
 }
 
 export const LeadIntelligenceModal: React.FC<LeadIntelligenceModalProps> = ({
   lead,
   onClose,
-  onOpenCompose
+  onOpenCompose,
+  activeOrg
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'opportunity' | 'decision_makers' | 'outreach'>('overview');
   const [copiedField, setCopiedField] = useState<string>('');
@@ -44,7 +48,7 @@ export const LeadIntelligenceModal: React.FC<LeadIntelligenceModalProps> = ({
     setTimeout(() => setCopiedField(''), 2000);
   };
 
-  const outreachPkg = lead.outreachPackage;
+  const outreachPkg = generateOutreachPackage(lead, activeOrg);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
@@ -204,7 +208,7 @@ export const LeadIntelligenceModal: React.FC<LeadIntelligenceModalProps> = ({
                 <div className="pt-2">
                   <span className="text-[10px] text-slate-400 font-bold block mb-1">Public Verification Source URLs:</span>
                   <div className="flex flex-wrap gap-2">
-                    {lead.sourceUrls?.map((url, idx) => (
+                    {lead.sourceUrls?.map((url: string, idx: number) => (
                       <a
                         key={idx}
                         href={url}
@@ -252,7 +256,7 @@ export const LeadIntelligenceModal: React.FC<LeadIntelligenceModalProps> = ({
               <div className="p-5 rounded-2xl bg-[#151726] border border-[#22263b] space-y-3">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Verified Buying Triggers</h4>
 
-                {lead.buyingSignalDetails?.map((sig, idx) => (
+                {lead.buyingSignalDetails?.map((sig: any, idx: number) => (
                   <div key={idx} className="p-3.5 rounded-xl bg-[#1a1d30] border border-[#272c44] flex items-start justify-between">
                     <div>
                       <div className="flex items-center space-x-2">
@@ -281,7 +285,7 @@ export const LeadIntelligenceModal: React.FC<LeadIntelligenceModalProps> = ({
             <div className="space-y-4">
               <h4 className="text-sm font-bold text-white font-display">Target Decision Makers</h4>
 
-              {lead.decisionMakerDetails?.map((dm, idx) => (
+              {lead.decisionMakerDetails?.map((dm: any, idx: number) => (
                 <div key={idx} className="p-4 rounded-2xl bg-[#151726] border border-[#22263b] flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-full bg-[#f5b82e]/20 text-[#f5b82e] border border-[#f5b82e]/30 flex items-center justify-center font-bold font-display text-sm">

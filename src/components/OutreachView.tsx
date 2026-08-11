@@ -14,6 +14,9 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Lead, SalesStatus } from '../types/lead';
+import { Organization } from '../types/saas';
+import { generateOutreachPackage } from '../services/aiScoring';
+import { getOrgMailboxes } from '../services/mailboxService';
 
 interface OutreachViewProps {
   leads: Lead[];
@@ -21,6 +24,7 @@ interface OutreachViewProps {
   onSelectLead: (lead: Lead) => void;
   onUpdateLeadStatus: (leadId: string, status: SalesStatus) => void;
   onUpdateLeadDetails: (leadId: string, updates: Partial<Lead>) => void;
+  activeOrg?: Organization;
 }
 
 export const OutreachView: React.FC<OutreachViewProps> = ({
@@ -28,7 +32,8 @@ export const OutreachView: React.FC<OutreachViewProps> = ({
   selectedLead,
   onSelectLead,
   onUpdateLeadStatus,
-  onUpdateLeadDetails
+  onUpdateLeadDetails,
+  activeOrg
 }) => {
   const activeLead = selectedLead || leads[0];
   const [activeMsgTab, setActiveMsgTab] = useState<'email' | 'linkedin' | 'whatsapp' | 'pitch' | 'followup1' | 'followup2'>('email');
@@ -44,16 +49,14 @@ export const OutreachView: React.FC<OutreachViewProps> = ({
     );
   }
 
-  const pkg = activeLead.outreachPackage || {
-    emailSubject: `Elevating ${activeLead.companyName}'s campaigns with Amusemac Studio`,
-    personalizedEmail: `Hi ${activeLead.decisionMakerName},\n\nWe love your work at ${activeLead.companyName}...`,
-    linkedinConnection: `Hi ${activeLead.decisionMakerName}, loved ${activeLead.companyName}'s recent campaigns! Let's connect.`,
-    linkedinFollowup: `Thanks for connecting! We produce TVCs & DVCs at Amusemac Studio...`,
-    whatsappMessage: `Hi ${activeLead.decisionMakerName}, Amusemac Studio here regarding high-grade ${activeLead.primaryService}...`,
-    shortIntroPitch: `${activeLead.companyName} + Amusemac Studio: TV commercial-grade production...`,
-    followupMessage1: `Hi ${activeLead.decisionMakerName}, following up on our commercial film capabilities...`,
-    followupMessage2: `Hi ${activeLead.decisionMakerName}, final check-in regarding video production partners...`
-  };
+  const pkg = generateOutreachPackage(activeLead, activeOrg);
+
+  const isAmusemac = !activeOrg || activeOrg.orgId === 'amusemac-studio';
+  const orgMailboxes = activeOrg ? getOrgMailboxes(activeOrg.orgId) : [];
+  const hasConnectedMailbox = isAmusemac || orgMailboxes.length > 0;
+  const connectedAddress = isAmusemac
+    ? 'hello@amusemacstudio.in'
+    : (orgMailboxes.length > 0 ? orgMailboxes[0].email : null);
 
   const handleCopyText = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -161,6 +164,33 @@ export const OutreachView: React.FC<OutreachViewProps> = ({
               <p className="text-slate-200 leading-relaxed">{activeLead.recommendedPitch}</p>
             </div>
           </div>
+
+          {/* Mailbox Status Guard */}
+          {!hasConnectedMailbox ? (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  <strong>Mailbox Not Connected:</strong> Connect your sending mailbox (Gmail, Microsoft, Zoho, Apple) to send emails directly from {activeOrg?.companyName || 'your workspace'}.
+                </span>
+              </div>
+              <button
+                onClick={() => { if (typeof window !== 'undefined') window.location.hash = '#settings'; }}
+                className="px-3 py-1.5 rounded-lg bg-[#f5b82e] text-[#0c0d12] font-bold text-xs hover:bg-[#e0a724]"
+              >
+                Connect Mailbox
+              </button>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  <strong>Connected Mailbox:</strong> Sending from <strong className="text-white">{connectedAddress}</strong> ({isAmusemac ? 'Zoho Mail Enterprise' : activeOrg?.companyName})
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Safety Approval Guard Alert */}
           <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center space-x-2">

@@ -354,6 +354,7 @@ export function App() {
               onSelectLead={setSelectedLead}
               onUpdateLeadStatus={handleUpdateLeadStatus}
               onUpdateLeadDetails={handleUpdateLeadDetails}
+              activeOrg={activeOrg}
             />
           )}
 
@@ -364,6 +365,7 @@ export function App() {
               onSelectLead={setSelectedLead}
               onUpdateLeadStatus={handleUpdateLeadStatus}
               onUpdateLeadDetails={handleUpdateLeadDetails}
+              activeOrg={activeOrg}
             />
           )}
 
@@ -452,6 +454,7 @@ export function App() {
             setSelectedLead(lead);
             setActiveTab('inbox');
           }}
+          activeOrg={activeOrg}
         />
       )}
 
