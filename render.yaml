@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: amusemac-growth-backend
+    env: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: node server.cjs
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        sync: false
+      - key: ZOHO_EMAIL
+        sync: false
+      - key: ZOHO_SMTP_HOST
+        value: smtppro.zoho.com
+      - key: ZOHO_SMTP_PORT
+        value: "465"
+      - key: ZOHO_SMTP_SECURE
+        value: "true"
+      - key: ZOHO_SMTP_PASSWORD
+        sync: false
+      - key: ZOHO_IMAP_HOST
+        value: imappro.zoho.com
+      - key: ZOHO_IMAP_PORT
+        value: "993"
+      - key: ZOHO_IMAP_SECURE
+        value: "true"
+      - key: ZOHO_IMAP_PASSWORD
+        sync: false

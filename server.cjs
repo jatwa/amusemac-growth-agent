@@ -17,9 +17,29 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || '0.0.0.0';
 
-app.use(cors());
+const allowedOrigin = process.env.CORS_ORIGIN;
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || !allowedOrigin || allowedOrigin === '*' || origin === allowedOrigin) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    credentials: true
+  })
+);
 app.use(express.json());
+
+// Health check endpoints for cloud load balancers and deployment verification
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'amusemac-growth-backend', timestamp: new Date().toISOString() });
+});
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', service: 'amusemac-growth-backend', timestamp: new Date().toISOString() });
+});
 
 // Middleware: Server Authentication & Authorization Boundary
 function authenticateServerRequest(req, res, next) {
@@ -228,10 +248,10 @@ app.post('/api/mail/test-send', authenticateServerRequest, async (req, res) => {
   res.json(result);
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log(`==================================================`);
   console.log(`AMUSEMAC GROWTH AGENT - AUTHENTICATED MULTI-TENANT BACKEND SERVER`);
-  console.log(`Server listening on: http://localhost:${PORT}`);
+  console.log(`Server listening on: http://${HOST}:${PORT}`);
   console.log(`Zoho Primary Mailbox: ${process.env.ZOHO_EMAIL || 'hello@amusemacstudio.in'}`);
   console.log(`==================================================`);
 });
