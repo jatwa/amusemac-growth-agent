@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Building2, Sparkles, ArrowRight, ShieldCheck, CheckCircle2, Check, Globe } from 'lucide-react';
-import { loginUser, signupUser, loginWithOAuthProvider, AuthSession } from '../services/authService';
+import { loginUser, signupUser, loginWithOAuthProvider, verifyGoogleAuthWithBackend, AuthSession } from '../services/authService';
 import { AuthProviderType, EmailProviderType } from '../types/saas';
 import { GoogleLogo, MicrosoftLogo, AppleLogo, ZohoLogo, AmusemacLogo } from './ProviderLogos';
 import { IS_DEV } from '../config/env';
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -33,20 +39,67 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
   const handleOAuthSignIn = async (provider: AuthProviderType) => {
     setIsLoading(true);
     setErrorMsg('');
+
+    if (provider === 'GOOGLE') {
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!clientId || clientId.trim() === '' || clientId.includes('YOUR_GOOGLE_CLIENT_ID')) {
+        setErrorMsg('VITE_GOOGLE_CLIENT_ID is not configured in environment variables.');
+        setIsLoading(false);
+        return;
+      }
+
+      const executeGis = () => {
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: async (response: any) => {
+              if (response.credential) {
+                try {
+                  const session = await verifyGoogleAuthWithBackend(response.credential);
+                  setPendingSession(session);
+                  setSelectedMailboxProvider('GMAIL');
+                  setMode('GRANT_MAILBOX');
+                } catch (err: any) {
+                  setErrorMsg(err.message || 'Google authentication failed server-side');
+                } finally {
+                  setIsLoading(false);
+                }
+              } else {
+                setErrorMsg('No credential returned from Google Sign-In.');
+                setIsLoading(false);
+              }
+            }
+          });
+          window.google.accounts.id.prompt();
+        }
+      };
+
+      if (window.google?.accounts?.id) {
+        executeGis();
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.onload = executeGis;
+        script.onerror = () => {
+          setErrorMsg('Failed to load Google Identity Services SDK.');
+          setIsLoading(false);
+        };
+        document.body.appendChild(script);
+      }
+      return;
+    }
+
     try {
-      // Simulate real OAuth popup return with unique user identity per login
+      // Simulate real OAuth popup return with unique user identity per login for other providers
       const uniqueId = Math.floor(1000 + Math.random() * 9000);
-      const dynamicEmail = provider === 'GOOGLE'
-        ? `google.user.${uniqueId}@gmail.com`
-        : provider === 'MICROSOFT'
+      const dynamicEmail = provider === 'MICROSOFT'
         ? `outlook.user.${uniqueId}@outlook.com`
         : provider === 'ZOHO'
         ? `zoho.user.${uniqueId}@zoho.com`
         : `apple.user.${uniqueId}@privaterelay.appleid.com`;
 
-      const dynamicName = provider === 'GOOGLE'
-        ? `Google User ${uniqueId}`
-        : provider === 'MICROSOFT'
+      const dynamicName = provider === 'MICROSOFT'
         ? `Microsoft User ${uniqueId}`
         : provider === 'ZOHO'
         ? `Zoho User ${uniqueId}`
@@ -55,12 +108,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
       const session = await loginWithOAuthProvider(provider, dynamicEmail, dynamicName);
       setPendingSession(session);
 
-      if (provider === 'GOOGLE' || provider === 'MICROSOFT' || provider === 'ZOHO') {
-        setSelectedMailboxProvider(provider === 'GOOGLE' ? 'GMAIL' : provider === 'MICROSOFT' ? 'MICROSOFT' : 'ZOHO');
+      if (provider === 'MICROSOFT' || provider === 'ZOHO') {
+        setSelectedMailboxProvider(provider === 'MICROSOFT' ? 'MICROSOFT' : 'ZOHO');
         setMode('GRANT_MAILBOX');
         setIsLoading(false);
       } else {
-        // Apple Sign In identity auth completes immediately without forcing mailbox connection
         onAuthenticated(session);
       }
     } catch (e: any) {

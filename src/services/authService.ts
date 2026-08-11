@@ -236,6 +236,27 @@ export async function loginUser(email: string, password: string): Promise<AuthSe
 }
 
 /**
+ * Authenticates user via Google OAuth ID Token server-side verification
+ */
+export async function verifyGoogleAuthWithBackend(idToken: string): Promise<AuthSession> {
+  const res = await fetch('/api/auth/google', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ idToken })
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Google OAuth verification failed');
+  }
+
+  saveSession(data.session.user, data.session.organization);
+  return data.session;
+}
+
+/**
  * Authenticates user via OAuth Provider (Google, Microsoft, Apple, Zoho)
  */
 export async function loginWithOAuthProvider(
