@@ -11,7 +11,7 @@ export default {
 
     // 1. API Request Proxy (/api/*)
     if (url.pathname.startsWith('/api/')) {
-      const apiOrigin = env.API_ORIGIN || 'https://amusemac-growth-backend.onrender.com';
+      const apiOrigin = env.API_ORIGIN || 'https://amusemac-growth-agent.onrender.com';
       const targetOrigin = apiOrigin.replace(/\/+$/, '');
       const targetUrl = new URL(url.pathname + url.search, targetOrigin);
 

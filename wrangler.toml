@@ -6,3 +6,6 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+
+[vars]
+API_ORIGIN = "https://amusemac-growth-agent.onrender.com"
