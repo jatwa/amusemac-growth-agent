@@ -148,6 +148,24 @@ export interface ScoreBreakdown {
   evidence: string;
 }
 
+export type VerificationStatus = 'VERIFIED_SOURCE' | 'AI_INFERRED' | 'UNVERIFIED';
+
+export interface LeadProvenance {
+  company: string;
+  website: string;
+  sourceUrl: string;
+  sourceType: 'WEB_SEARCH' | 'GOOGLE_MAPS' | 'LINKEDIN_DIRECTORY' | 'SEEDED_DEMO_DATA';
+  discoveredAt: string;
+  decisionMaker: string;
+  decisionMakerTitle: string;
+  contactSource: string;
+  buyingSignal: string;
+  buyingSignalSource: string;
+  verificationStatus: VerificationStatus;
+  confidence: number;
+  isDemoData?: boolean;
+}
+
 export interface Lead {
   leadId: string;
   companyName: string;
@@ -215,6 +233,8 @@ export interface Lead {
   userFeedback?: FeedbackRating;
   notes?: string;
   leadSource?: string;
+  verificationStatus?: VerificationStatus;
+  provenance?: LeadProvenance;
 }
 
 export interface SearchFilterOptions {

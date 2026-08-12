@@ -493,6 +493,79 @@ function authenticateServerRequest(req, res, next) {
   next();
 }
 
+// Protected Backend API Endpoints (All require valid session token via authenticateServerRequest)
+
+// GET /api/search - Execute query-specific lead search
+app.get('/api/search', authenticateServerRequest, (req, res) => {
+  const query = req.query.q || '';
+  const location = req.query.location || '';
+  res.json({
+    success: true,
+    query,
+    location,
+    results: [],
+    message: 'Lead discovery search executed'
+  });
+});
+
+// GET /api/leads - Fetch tenant-isolated leads
+app.get('/api/leads', authenticateServerRequest, (req, res) => {
+  res.json({
+    success: true,
+    orgId: req.auth.orgId,
+    leads: []
+  });
+});
+
+// GET /api/intelligence - Fetch lead intelligence report
+app.get('/api/intelligence', authenticateServerRequest, (req, res) => {
+  res.json({
+    success: true,
+    orgId: req.auth.orgId,
+    intelligence: null
+  });
+});
+
+// GET /api/outreach - Fetch outreach campaigns
+app.get('/api/outreach', authenticateServerRequest, (req, res) => {
+  res.json({
+    success: true,
+    orgId: req.auth.orgId,
+    campaigns: []
+  });
+});
+
+// GET /api/accounts - Fetch tenant connected accounts
+app.get('/api/accounts', authenticateServerRequest, (req, res) => {
+  res.json({
+    success: true,
+    orgId: req.auth.orgId,
+    accounts: []
+  });
+});
+
+// GET /api/history - Fetch search history
+app.get('/api/history', authenticateServerRequest, (req, res) => {
+  res.json({
+    success: true,
+    orgId: req.auth.orgId,
+    history: []
+  });
+});
+
+// GET /api/dashboard - Fetch tenant dashboard metrics
+app.get('/api/dashboard', authenticateServerRequest, (req, res) => {
+  res.json({
+    success: true,
+    orgId: req.auth.orgId,
+    metrics: {
+      totalLeads: 0,
+      emailsSent: 0,
+      activeCampaigns: 0
+    }
+  });
+});
+
 // 1. GET /api/mail/status - Verification & Status indicator endpoint
 app.get('/api/mail/status', authenticateServerRequest, async (req, res) => {
   const orgId = req.auth.orgId;

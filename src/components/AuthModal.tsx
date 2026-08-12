@@ -120,7 +120,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
     }
   };
 
-  const handleCompleteMailboxGrant = (skip: boolean) => {
+  const handleCompleteMailboxGrant = () => {
     if (pendingSession) {
       onAuthenticated(pendingSession);
     }
@@ -223,22 +223,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
               </div>
             </div>
 
-            <div className="pt-2 space-y-2">
+            <div className="pt-2">
               <button
                 type="button"
-                onClick={() => handleCompleteMailboxGrant(false)}
+                onClick={() => handleCompleteMailboxGrant()}
                 className="btn-gold w-full py-3 rounded-xl font-bold flex items-center justify-center space-x-2 shadow-lg shadow-[#f5b82e]/20"
               >
                 <span>Connect Email & Continue</span>
                 <ArrowRight className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleCompleteMailboxGrant(true)}
-                className="w-full py-2 text-[#f5b82e] hover:underline font-bold text-center text-xs"
-              >
-                Skip for now
               </button>
             </div>
 
