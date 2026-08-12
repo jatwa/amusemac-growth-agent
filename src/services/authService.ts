@@ -422,6 +422,34 @@ export async function loginWithOAuthProvider(
 /**
  * Registers new user and organization via signup form
  */
+export interface PasswordValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export function validatePasswordPolicy(password: string): PasswordValidationResult {
+  const errors: string[] = [];
+  if (!password || password.length < 12) {
+    errors.push('Password must be at least 12 characters long');
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Password must contain at least one special character');
+  }
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
 export async function signupUser(
   companyName: string,
   email: string,
@@ -430,6 +458,15 @@ export async function signupUser(
   await new Promise(r => setTimeout(r, 400));
 
   const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    throw new Error('Please enter a valid work email address');
+  }
+
+  const passValidation = validatePasswordPolicy(password);
+  if (!passValidation.valid) {
+    throw new Error(`Password policy failed: ${passValidation.errors.join('. ')}`);
+  }
+
   const displayName = companyName.trim() + ' Admin';
   const newOrgId = `org-cust-${generateUuid()}`;
 

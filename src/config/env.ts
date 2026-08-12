@@ -25,5 +25,14 @@ export const OAUTH_CONFIG = {
   }
 };
 
-export const IS_PRODUCTION = (env as any).PROD || false;
-export const IS_DEV = (env as any).DEV || true;
+export const IS_PRODUCTION = (env as any).PROD === true || (env as any).MODE === 'production' || process.env.NODE_ENV === 'production';
+export const IS_DEV = (env as any).DEV === true && !IS_PRODUCTION;
+
+export const GOOGLE_CLIENT_ID_REGEX = /^\d+-[a-zA-Z0-9_-]+\.apps\.googleusercontent\.com$/;
+export function isValidGoogleClientId(clientId: string): boolean {
+  if (!clientId || typeof clientId !== 'string') return false;
+  const trimmed = clientId.trim();
+  if (!trimmed || trimmed.includes('YOUR_GOOGLE_CLIENT_ID') || trimmed.includes('google-client-id-dev')) return false;
+  return GOOGLE_CLIENT_ID_REGEX.test(trimmed);
+}
+

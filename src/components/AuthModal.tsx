@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Building2, Sparkles, ArrowRight, ShieldCheck, CheckCircle2, Check, Globe } from 'lucide-react';
-import { loginUser, signupUser, loginWithOAuthProvider, verifyGoogleAuthWithBackend, getGoogleClientId, AuthSession } from '../services/authService';
+import { Mail, Lock, Building2, Sparkles, ArrowRight, ShieldCheck, CheckCircle2, Check, Globe, Eye, EyeOff } from 'lucide-react';
+import { loginUser, signupUser, loginWithOAuthProvider, verifyGoogleAuthWithBackend, getGoogleClientId, AuthSession, validatePasswordPolicy } from '../services/authService';
 import { AuthProviderType, EmailProviderType } from '../types/saas';
 import { GoogleLogo, ZohoLogo, AmusemacLogo } from './ProviderLogos';
 import { IS_DEV } from '../config/env';
@@ -19,12 +19,13 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated }) => {
   const [mode, setMode] = useState<'LOGIN' | 'SIGNUP' | 'FORGOT' | 'GRANT_MAILBOX'>('LOGIN');
 
-  // Form Fields
+  // Form Fields - Clean initial state (NO PREFILLED EMAIL/PASSWORD)
   const [companyName, setCompanyName] = useState('');
   const [fullName, setFullName] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // OAuth Session & Mailbox Selection State
   const [pendingSession, setPendingSession] = useState<AuthSession | null>(null);
@@ -102,20 +103,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
         }
       } catch (e) {}
 
-      try {
-        const uniqueId = Math.floor(1000 + Math.random() * 9000);
-        const dynamicEmail = `zoho.user.${uniqueId}@zoho.com`;
-        const dynamicName = `Zoho User ${uniqueId}`;
-
-        const session = await loginWithOAuthProvider('ZOHO', dynamicEmail, dynamicName);
-        setPendingSession(session);
-        setSelectedMailboxProvider('ZOHO');
-        setMode('GRANT_MAILBOX');
-        setIsLoading(false);
-      } catch (e: any) {
-        setErrorMsg(e.message || 'Zoho authentication failed');
-        setIsLoading(false);
-      }
+      // REAL ARCHITECTURE: Never generate mock zoho.user sessions on missing OAuth config
+      setErrorMsg('Zoho Sign-In is not configured on the server. Please set ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET on Render.');
+      setIsLoading(false);
       return;
     }
   };
@@ -142,6 +132,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
           setIsLoading(false);
           return;
         }
+
+        const passCheck = validatePasswordPolicy(password);
+        if (!passCheck.valid) {
+          setErrorMsg(`Password policy failed: ${passCheck.errors.join('. ')}`);
+          setIsLoading(false);
+          return;
+        }
+
         const session = await signupUser(companyName, email, password);
         onAuthenticated(session);
       } else if (mode === 'FORGOT') {
@@ -223,67 +221,66 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
               </div>
             </div>
 
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => handleCompleteMailboxGrant()}
-                className="btn-gold w-full py-3 rounded-xl font-bold flex items-center justify-center space-x-2 shadow-lg shadow-[#f5b82e]/20"
-              >
-                <span>Connect Email & Continue</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-[10px] text-slate-500 text-center leading-relaxed">
-              Your connection is securely handled and can be disconnected anytime from Connected Accounts.
-            </p>
+            <button
+              type="button"
+              onClick={handleCompleteMailboxGrant}
+              className="btn-gold w-full py-3 rounded-xl font-bold flex items-center justify-center space-x-2"
+            >
+              <span>Connect Email & Continue</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         ) : (
           <>
-            {/* Multi-Provider Login Buttons */}
-            {mode === 'LOGIN' && (
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => handleOAuthSignIn('GOOGLE')}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#181b2c] hover:bg-[#20253d] border border-[#2c324e] text-white font-bold text-xs flex items-center justify-center space-x-2.5 transition-all shadow-md"
-                >
-                  <GoogleLogo className="w-4 h-4" />
-                  <span>Continue with Google</span>
-                </button>
+            {/* Primary OAuth Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => handleOAuthSignIn('GOOGLE')}
+                disabled={isLoading}
+                className="flex items-center justify-center space-x-2.5 p-3 rounded-xl bg-[#161928] hover:bg-[#1f2438] border border-[#2a2f47] transition-all text-xs font-semibold text-white shadow-sm disabled:opacity-50"
+              >
+                <GoogleLogo className="w-4 h-4" />
+                <span>Google</span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleOAuthSignIn('ZOHO')}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#181b2c] hover:bg-[#20253d] border border-[#2c324e] text-white font-bold text-xs flex items-center justify-center space-x-2.5 transition-all shadow-md"
-                >
-                  <ZohoLogo className="w-5 h-3" />
-                  <span>Continue with Zoho</span>
-                </button>
+              <button
+                type="button"
+                onClick={() => handleOAuthSignIn('ZOHO')}
+                disabled={isLoading}
+                className="flex items-center justify-center space-x-2.5 p-3 rounded-xl bg-[#161928] hover:bg-[#1f2438] border border-[#2a2f47] transition-all text-xs font-semibold text-white shadow-sm disabled:opacity-50"
+              >
+                <ZohoLogo className="w-5 h-3.5" />
+                <span>Zoho</span>
+              </button>
+            </div>
 
-                <div className="relative py-2 flex items-center justify-center">
-                  <div className="border-t border-[#23273d] w-full" />
-                  <span className="bg-[#121420] px-3 text-[10px] text-slate-500 font-bold uppercase tracking-wider absolute">
-                    or continue with email
-                  </span>
-                </div>
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#23273d]"></div>
               </div>
-            )}
+              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
+                <span className="bg-[#121420] px-3 text-slate-500">Or continue with email</span>
+              </div>
+            </div>
 
-            {/* Email & Password Form */}
-            <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+            {/* Email + Password Form */}
+            <form onSubmit={handleSubmit} className="space-y-3 text-xs">
               {mode === 'SIGNUP' && (
                 <>
                   <div>
-                    <label className="text-slate-300 font-semibold block mb-1">Company / Business Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="Plus One Design Studio"
-                      className="w-full bg-[#161928] border border-[#2a2f47] text-white rounded-xl px-3.5 py-2.5 outline-none focus:border-[#f5b82e]"
-                    />
+                    <label className="text-slate-300 font-semibold block mb-1">Company / Studio Name *</label>
+                    <div className="relative">
+                      <Building2 className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                      <input
+                        type="text"
+                        required
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Amusemac Studio"
+                        className="w-full bg-[#161928] border border-[#2a2f47] text-white rounded-xl pl-9 pr-4 py-2.5 outline-none focus:border-[#f5b82e]"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -299,7 +296,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
                   </div>
 
                   <div>
-                    <label className="text-slate-300 font-semibold block mb-1">WhatsApp Mobile Number * (For Alerts)</label>
+                    <label className="text-slate-300 font-semibold block mb-1">WhatsApp Mobile Number *</label>
                     <input
                       type="text"
                       required
@@ -321,7 +318,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="hello@amusemacstudio.in"
+                    placeholder="you@company.com"
                     className="w-full bg-[#161928] border border-[#2a2f47] text-white rounded-xl pl-9 pr-4 py-2.5 outline-none focus:border-[#f5b82e]"
                   />
                 </div>
@@ -344,14 +341,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full bg-[#161928] border border-[#2a2f47] text-white rounded-xl pl-9 pr-4 py-2.5 outline-none focus:border-[#f5b82e]"
+                      className="w-full bg-[#161928] border border-[#2a2f47] text-white rounded-xl pl-9 pr-10 py-2.5 outline-none focus:border-[#f5b82e]"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => !prev)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-white p-0.5 rounded-lg focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
+
+                  {mode === 'SIGNUP' && (
+                    <div className="mt-2 p-3 bg-[#171a2b] border border-[#272c44] rounded-xl text-[11px] space-y-1 text-slate-400">
+                      <span className="font-bold block text-slate-300">Password Policy Requirements:</span>
+                      <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px]">
+                        <li className={password.length >= 12 ? 'text-emerald-400 font-semibold' : ''}>• 12+ characters</li>
+                        <li className={/[A-Z]/.test(password) ? 'text-emerald-400 font-semibold' : ''}>• 1 Uppercase (A-Z)</li>
+                        <li className={/[a-z]/.test(password) ? 'text-emerald-400 font-semibold' : ''}>• 1 Lowercase (a-z)</li>
+                        <li className={/[0-9]/.test(password) ? 'text-emerald-400 font-semibold' : ''}>• 1 Number (0-9)</li>
+                        <li className={/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-emerald-400 font-semibold' : ''}>• 1 Special char</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -371,8 +389,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
               </button>
             </form>
 
-            {/* Test Account Quick-Select (Dev Only) */}
-            {IS_DEV && (
+            {/* Test Account Quick-Select (EXPLICIT DEV MODE ONLY) */}
+            {import.meta.env.DEV && IS_DEV && (
               <div className="p-[#161928] border border-[#272c44] text-[11px] space-y-1.5 rounded-2xl p-3">
                 <span className="text-slate-400 font-bold block uppercase text-[10px]">Development Test Accounts</span>
                 <div className="grid grid-cols-2 gap-2">

@@ -42,9 +42,22 @@ app.use(express.json());
 
 const { OAuth2Client } = require('google-auth-library');
 
+const GOOGLE_CLIENT_ID_REGEX = /^\d+-[a-zA-Z0-9_-]+\.apps\.googleusercontent\.com$/;
+
 // Health check endpoints for cloud load balancers and deployment verification
 app.get('/health', (req, res) => {
-  res.status(200).json({ ok: true, service: 'amusemac-growth-agent', status: 'ok', timestamp: new Date().toISOString() });
+  const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '';
+  const zohoClientId = process.env.ZOHO_CLIENT_ID || process.env.VITE_ZOHO_CLIENT_ID || '';
+  res.status(200).json({
+    ok: true,
+    service: 'amusemac-growth-agent',
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    auth: {
+      googleConfigured: Boolean(googleClientId && GOOGLE_CLIENT_ID_REGEX.test(googleClientId.trim())),
+      zohoConfigured: Boolean(zohoClientId && process.env.ZOHO_CLIENT_SECRET)
+    }
+  });
 });
 app.get('/api/health', (req, res) => {
   res.status(200).json({ ok: true, service: 'amusemac-growth-agent', status: 'ok', timestamp: new Date().toISOString() });
@@ -53,6 +66,9 @@ app.get('/api/health', (req, res) => {
 // GET /api/config - Public configuration endpoint (returns public Client & Payment IDs safely)
 app.get('/api/config', (req, res) => {
   const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '';
+  const zohoClientId = process.env.ZOHO_CLIENT_ID || process.env.VITE_ZOHO_CLIENT_ID || '';
+  const isGoogleValidFormat = GOOGLE_CLIENT_ID_REGEX.test(googleClientId.trim());
+
   const paymentUrls = {
     LITE: process.env.PAYMENT_URL_LITE || process.env.VITE_PAYMENT_URL_LITE || 'https://rzp.io/rzp/O7hxPS3',
     PRO: process.env.PAYMENT_URL_PRO || process.env.VITE_PAYMENT_URL_PRO || 'https://rzp.io/rzp/IZB7zFj',
@@ -67,6 +83,10 @@ app.get('/api/config', (req, res) => {
   res.json({
     success: true,
     googleClientId,
+    googleClientIdPresent: Boolean(googleClientId),
+    googleClientIdValidFormat: isGoogleValidFormat,
+    googleAuthConfigured: Boolean(googleClientId && isGoogleValidFormat),
+    zohoAuthConfigured: Boolean(zohoClientId && process.env.ZOHO_CLIENT_SECRET),
     paymentUrls
   });
 });
@@ -456,6 +476,18 @@ app.post('/api/auth/zoho/callback', async (req, res) => {
   });
 });
 
+const invalidatedSessions = new Set();
+
+// POST /api/auth/logout - Invalidate server session token
+app.post('/api/auth/logout', (req, res) => {
+  const authHeader = req.headers.authorization || req.headers['x-auth-token'];
+  const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : (req.query && req.query.token);
+  if (token) {
+    invalidatedSessions.add(token);
+  }
+  res.json({ success: true, message: 'Session logged out successfully' });
+});
+
 // Middleware: Server Authentication & Authorization Boundary
 function authenticateServerRequest(req, res, next) {
   const authHeader = req.headers.authorization || req.headers['x-auth-token'];
@@ -464,6 +496,10 @@ function authenticateServerRequest(req, res, next) {
 
   if (!token) {
     return res.status(401).json({ success: false, message: 'Unauthorized: Authentication token required.' });
+  }
+
+  if (invalidatedSessions.has(token)) {
+    return res.status(401).json({ success: false, message: 'Unauthorized: Session has been logged out.' });
   }
 
   let payload = null;
