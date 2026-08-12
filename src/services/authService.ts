@@ -286,6 +286,27 @@ export async function verifyGoogleAuthWithBackend(idToken: string): Promise<Auth
 }
 
 /**
+ * Authenticates user via Zoho OAuth authorization code server-side verification
+ */
+export async function verifyZohoAuthWithBackend(code: string, state?: string): Promise<AuthSession> {
+  const res = await fetch('/api/auth/zoho/callback', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ code, state })
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Zoho OAuth verification failed');
+  }
+
+  saveSession(data.session.user, data.session.organization);
+  return data.session;
+}
+
+/**
  * Authenticates user via OAuth Provider (Google, Zoho)
  */
 export async function loginWithOAuthProvider(

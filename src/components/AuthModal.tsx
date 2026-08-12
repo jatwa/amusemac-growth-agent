@@ -90,24 +90,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
       return;
     }
 
-    try {
-      const uniqueId = Math.floor(1000 + Math.random() * 9000);
-      const dynamicEmail = `zoho.user.${uniqueId}@zoho.com`;
-      const dynamicName = `Zoho User ${uniqueId}`;
+    if (provider === 'ZOHO') {
+      try {
+        const res = await fetch('/api/auth/zoho/url');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.configured && data.url) {
+            window.location.href = data.url;
+            return;
+          }
+        }
+      } catch (e) {}
 
-      const session = await loginWithOAuthProvider(provider, dynamicEmail, dynamicName);
-      setPendingSession(session);
+      try {
+        const uniqueId = Math.floor(1000 + Math.random() * 9000);
+        const dynamicEmail = `zoho.user.${uniqueId}@zoho.com`;
+        const dynamicName = `Zoho User ${uniqueId}`;
 
-      if (provider === 'ZOHO') {
+        const session = await loginWithOAuthProvider('ZOHO', dynamicEmail, dynamicName);
+        setPendingSession(session);
         setSelectedMailboxProvider('ZOHO');
         setMode('GRANT_MAILBOX');
         setIsLoading(false);
-      } else {
-        onAuthenticated(session);
+      } catch (e: any) {
+        setErrorMsg(e.message || 'Zoho authentication failed');
+        setIsLoading(false);
       }
-    } catch (e: any) {
-      setErrorMsg(e.message || `${provider} authentication failed`);
-      setIsLoading(false);
+      return;
     }
   };
 
