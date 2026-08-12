@@ -34,6 +34,11 @@ export function harvestRawProspectPool(
   userQuery?: string,
   requestedCount: number = 20
 ): RawCompany[] {
+  // Production LIVE mode guard: never silently fall back to static seed data
+  if (typeof process !== 'undefined' && process.env.DEMO_MODE !== 'true') {
+    throw new Error('SERPAPI_UNCONFIGURED: Live search provider required. Set DEMO_MODE=true for local offline development.');
+  }
+
   const rawPool: RawCompany[] = [];
   const qLower = (userQuery || '').toLowerCase().trim();
 
