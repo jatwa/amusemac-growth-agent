@@ -1,5 +1,81 @@
 import { SubscriptionPlan, Organization, User } from '../types/saas';
 
+export type BillingPeriod = 'MONTHLY' | 'YEARLY';
+
+export interface PlanPricingDetail {
+  planId: 'FREE' | 'LITE' | 'PRO' | 'MAX' | 'ENTERPRISE';
+  name: string;
+  monthlyPrice: number;
+  monthlyPriceLabel: string;
+  monthlyRazorpayUrl: string;
+  annualBasePrice?: number;
+  annualPriceLabel?: string;
+  discountPercent?: number;
+  firstPaymentPrice?: number;
+  firstPaymentLabel?: string;
+  offerId?: string;
+  yearlyRazorpayUrl?: string;
+}
+
+export const PRICING_CONFIG: Record<string, PlanPricingDetail> = {
+  FREE: {
+    planId: 'FREE',
+    name: 'Free Trial',
+    monthlyPrice: 0,
+    monthlyPriceLabel: 'FREE',
+    monthlyRazorpayUrl: ''
+  },
+  LITE: {
+    planId: 'LITE',
+    name: 'Growth Lite',
+    monthlyPrice: 499,
+    monthlyPriceLabel: '₹499',
+    monthlyRazorpayUrl: 'https://rzp.io/rzp/O7hxPS3',
+    annualBasePrice: 5988,
+    annualPriceLabel: '₹5,988',
+    discountPercent: 16.67,
+    firstPaymentPrice: 4989.80,
+    firstPaymentLabel: 'First payment ≈ ₹4,989.80',
+    offerId: 'offer_TOZstXqadkpvM8',
+    yearlyRazorpayUrl: 'https://rzp.io/rzp/DkD0oqC'
+  },
+  PRO: {
+    planId: 'PRO',
+    name: 'Growth Pro',
+    monthlyPrice: 1499,
+    monthlyPriceLabel: '₹1,499',
+    monthlyRazorpayUrl: 'https://rzp.io/rzp/IZB7zFj',
+    annualBasePrice: 17988,
+    annualPriceLabel: '₹17,988',
+    discountPercent: 22.17,
+    firstPaymentPrice: 14000.06,
+    firstPaymentLabel: 'First payment ≈ ₹14,000.06',
+    offerId: 'offer_TOZuHFxBaItBP0',
+    yearlyRazorpayUrl: 'https://rzp.io/rzp/gOW5X0B9'
+  },
+  MAX: {
+    planId: 'MAX',
+    name: 'Growth Max',
+    monthlyPrice: 2999,
+    monthlyPriceLabel: '₹2,999',
+    monthlyRazorpayUrl: 'https://rzp.io/rzp/Ecanmsp',
+    annualBasePrice: 35988,
+    annualPriceLabel: '₹35,988',
+    discountPercent: 30,
+    firstPaymentPrice: 25191.60,
+    firstPaymentLabel: 'First payment ₹25,191.60',
+    offerId: 'offer_TOZp2LabOdB2X8',
+    yearlyRazorpayUrl: 'https://rzp.io/rzp/5p35p0N'
+  },
+  ENTERPRISE: {
+    planId: 'ENTERPRISE',
+    name: 'Enterprise Scale',
+    monthlyPrice: 0,
+    monthlyPriceLabel: 'Custom',
+    monthlyRazorpayUrl: ''
+  }
+};
+
 export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
   FREE: {
     planId: 'FREE',

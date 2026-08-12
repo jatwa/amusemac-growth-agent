@@ -19,11 +19,18 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
-const allowedOrigin = process.env.CORS_ORIGIN;
+const allowedOrigin = process.env.CORS_ORIGIN || 'https://amusemac-growth-agent.amusemac-india.workers.dev';
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || !allowedOrigin || allowedOrigin === '*' || origin === allowedOrigin) {
+      if (!origin) return callback(null, true);
+      if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        return callback(null, true);
+      }
+      if (origin === allowedOrigin || allowedOrigin === '*') {
+        return callback(null, true);
+      }
+      if (origin === 'https://amusemac-growth-agent.amusemac-india.workers.dev') {
         return callback(null, true);
       }
       return callback(null, true);
@@ -37,19 +44,22 @@ const { OAuth2Client } = require('google-auth-library');
 
 // Health check endpoints for cloud load balancers and deployment verification
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'amusemac-growth-backend', timestamp: new Date().toISOString() });
+  res.status(200).json({ ok: true, service: 'amusemac-growth-agent', status: 'ok', timestamp: new Date().toISOString() });
 });
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'amusemac-growth-backend', timestamp: new Date().toISOString() });
+  res.status(200).json({ ok: true, service: 'amusemac-growth-agent', status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // GET /api/config - Public configuration endpoint (returns public Client & Payment IDs safely)
 app.get('/api/config', (req, res) => {
   const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '';
   const paymentUrls = {
-    LITE: process.env.PAYMENT_URL_LITE || process.env.VITE_PAYMENT_URL_LITE || '',
-    PRO: process.env.PAYMENT_URL_PRO || process.env.VITE_PAYMENT_URL_PRO || '',
-    MAX: process.env.PAYMENT_URL_MAX || process.env.VITE_PAYMENT_URL_MAX || '',
+    LITE: process.env.PAYMENT_URL_LITE || process.env.VITE_PAYMENT_URL_LITE || 'https://rzp.io/rzp/O7hxPS3',
+    PRO: process.env.PAYMENT_URL_PRO || process.env.VITE_PAYMENT_URL_PRO || 'https://rzp.io/rzp/IZB7zFj',
+    MAX: process.env.PAYMENT_URL_MAX || process.env.VITE_PAYMENT_URL_MAX || 'https://rzp.io/rzp/Ecanmsp',
+    LITE_YEARLY: process.env.PAYMENT_URL_LITE_YEARLY || process.env.VITE_PAYMENT_URL_LITE_YEARLY || 'https://rzp.io/rzp/DkD0oqC',
+    PRO_YEARLY: process.env.PAYMENT_URL_PRO_YEARLY || process.env.VITE_PAYMENT_URL_PRO_YEARLY || 'https://rzp.io/rzp/gOW5X0B9',
+    MAX_YEARLY: process.env.PAYMENT_URL_MAX_YEARLY || process.env.VITE_PAYMENT_URL_MAX_YEARLY || 'https://rzp.io/rzp/5p35p0N',
     ENTERPRISE: process.env.PAYMENT_URL_ENTERPRISE || process.env.VITE_PAYMENT_URL_ENTERPRISE || '',
     CHECKOUT: process.env.PAYMENT_CHECKOUT_URL || process.env.VITE_PAYMENT_CHECKOUT_URL || ''
   };
@@ -445,9 +455,11 @@ app.post('/api/mail/test-send', authenticateServerRequest, async (req, res) => {
 });
 
 app.listen(PORT, HOST, () => {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '';
   console.log(`==================================================`);
   console.log(`AMUSEMAC GROWTH AGENT - AUTHENTICATED MULTI-TENANT BACKEND SERVER`);
   console.log(`Server listening on: http://${HOST}:${PORT}`);
+  console.log(`Google OAuth Client ID: ${googleClientId ? 'CONFIG PRESENT' : 'CONFIG MISSING'}`);
   console.log(`Zoho Primary Mailbox: ${process.env.ZOHO_EMAIL || 'hello@amusemacstudio.in'}`);
   console.log(`==================================================`);
 });

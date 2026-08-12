@@ -11,21 +11,7 @@ export default {
 
     // 1. API Request Proxy (/api/*)
     if (url.pathname.startsWith('/api/')) {
-      const apiOrigin = env.API_ORIGIN;
-
-      if (!apiOrigin) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: 'Production API_ORIGIN not configured. Please set the API_ORIGIN environment variable in Cloudflare Workers settings.'
-          }),
-          {
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
+      const apiOrigin = env.API_ORIGIN || 'https://amusemac-growth-backend.onrender.com';
       const targetOrigin = apiOrigin.replace(/\/+$/, '');
       const targetUrl = new URL(url.pathname + url.search, targetOrigin);
 
@@ -67,11 +53,23 @@ export default {
 
     // Helper: Inject runtime config window.__AMUSEMAC_CONFIG__ into HTML responses
     const googleClientId = env.VITE_GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '';
+    const paymentCheckoutUrl = env.VITE_PAYMENT_CHECKOUT_URL || env.PAYMENT_CHECKOUT_URL || '';
+
+    if (googleClientId) {
+      console.log('[Cloudflare Worker] GOOGLE_CLIENT_ID CONFIG PRESENT');
+    } else {
+      console.log('[Cloudflare Worker] GOOGLE_CLIENT_ID CONFIG MISSING');
+    }
+
     const injectRuntimeConfig = async (assetResponse) => {
       const contentType = assetResponse.headers.get('content-type') || '';
       if (googleClientId && contentType.includes('text/html')) {
         let html = await assetResponse.text();
-        const configScript = `<script>window.__AMUSEMAC_CONFIG__={GOOGLE_CLIENT_ID:${JSON.stringify(googleClientId)}};</script>`;
+        const safeConfig = {
+          GOOGLE_CLIENT_ID: googleClientId,
+          PAYMENT_CHECKOUT_URL: paymentCheckoutUrl
+        };
+        const configScript = `<script>window.__AMUSEMAC_CONFIG__=${JSON.stringify(safeConfig)};</script>`;
         if (html.includes('</head>')) {
           html = html.replace('</head>', `${configScript}</head>`);
         } else {
