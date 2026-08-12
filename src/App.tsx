@@ -14,7 +14,7 @@ import {
   saveOrganizationsList
 } from './services/tenantStore';
 import { getOrgUsage, trackOrgUsage, checkPlanAllowance } from './services/usageMetering';
-import { getCurrentSession, logoutUser, AuthSession } from './services/authService';
+import { getCurrentSession, logoutUser, AuthSession, verifyZohoAuthWithBackend } from './services/authService';
 import { canAccessAdminPanel } from './services/entitlementService';
 
 import { PublicMarketingView } from './components/PublicMarketingView';
@@ -47,6 +47,25 @@ export function App() {
   useEffect(() => {
     const cleanup = initThemeListener();
     return cleanup;
+  }, []);
+
+  // Handle OAuth Redirect Callback (e.g. /auth/zoho/callback?code=...)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+
+    if (code && (window.location.pathname.includes('/auth/zoho/callback') || window.location.pathname.includes('/auth/callback') || window.location.search.includes('code='))) {
+      (async () => {
+        try {
+          const session = await verifyZohoAuthWithBackend(code, state || undefined);
+          handleAuthenticated(session);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (err: any) {
+          console.error('[Zoho Callback Error]', err);
+        }
+      })();
+    }
   }, []);
 
   // Real Authentication Session State
