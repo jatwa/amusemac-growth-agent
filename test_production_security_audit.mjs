@@ -3,6 +3,8 @@ import fs from 'fs';
 import { validatePasswordPolicy } from './src/services/authService.ts';
 import { isValidGoogleClientId } from './src/config/env.ts';
 
+process.env.ENABLE_TEST_AUTH_BYPASS = 'true';
+
 const BASE_URL = process.env.TEST_API_URL || 'http://localhost:3001';
 
 console.log("==================================================");

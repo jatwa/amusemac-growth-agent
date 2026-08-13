@@ -52,6 +52,8 @@ app.get('/health', (req, res) => {
     ok: true,
     service: 'amusemac-growth-agent',
     status: 'ok',
+    version: '2.0.0',
+    commitSha: process.env.RENDER_GIT_COMMIT || '0958189',
     timestamp: new Date().toISOString(),
     auth: {
       googleConfigured: Boolean(googleClientId && GOOGLE_CLIENT_ID_REGEX.test(googleClientId.trim())),
@@ -60,7 +62,10 @@ app.get('/health', (req, res) => {
   });
 });
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ ok: true, service: 'amusemac-growth-agent', status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({ ok: true, service: 'amusemac-growth-agent', status: 'ok', commitSha: process.env.RENDER_GIT_COMMIT || '0958189', timestamp: new Date().toISOString() });
+});
+app.get('/api/version', (req, res) => {
+  res.status(200).json({ ok: true, service: 'amusemac-growth-agent', version: '2.0.0', commitSha: process.env.RENDER_GIT_COMMIT || '0958189', timestamp: new Date().toISOString() });
 });
 
 // GET /api/config - Public configuration endpoint (returns public Client & Payment IDs safely)
@@ -82,6 +87,8 @@ app.get('/api/config', (req, res) => {
 
   res.json({
     success: true,
+    version: '2.0.0',
+    commitSha: process.env.RENDER_GIT_COMMIT || '0958189',
     googleClientId,
     googleClientIdPresent: Boolean(googleClientId),
     googleClientIdValidFormat: isGoogleValidFormat,
@@ -99,8 +106,12 @@ async function verifyGoogleIdTokenServer(idToken) {
 
   const clientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
 
-  // Test token format (amu_gtest_<b64>) for unit tests and local dev mock
+  // Test token format (amu_gtest_<b64>) for unit tests ONLY (disabled in production)
   if (idToken.startsWith('amu_gtest_')) {
+    const isTestBypassAllowed = process.env.ENABLE_TEST_AUTH_BYPASS && process.env.ENABLE_TEST_AUTH_BYPASS.trim() === 'true' && process.env.NODE_ENV !== 'production';
+    if (!isTestBypassAllowed) {
+      throw new Error('Test OAuth tokens are not allowed in production');
+    }
     const rawData = idToken.slice('amu_gtest_'.length).replace(/-/g, '+').replace(/_/g, '/');
     const padLen = (4 - (rawData.length % 4)) % 4;
     const padded = rawData + '='.repeat(padLen);
@@ -309,8 +320,15 @@ app.post('/api/auth/zoho/callback', async (req, res) => {
   let zohoName = '';
   let zohoZuid = '';
 
-  // Check for test code format: amu_ztest_<b64>
+  // Check for test code format: amu_ztest_<b64> (disabled in production)
   if (code.startsWith('amu_ztest_')) {
+    const isTestBypassAllowed = process.env.ENABLE_TEST_AUTH_BYPASS && process.env.ENABLE_TEST_AUTH_BYPASS.trim() === 'true' && process.env.NODE_ENV !== 'production';
+    if (!isTestBypassAllowed) {
+      return res.status(401).json({
+        success: false,
+        message: 'Test OAuth tokens are not allowed in production'
+      });
+    }
     try {
       const rawB64 = code.slice('amu_ztest_'.length).replace(/-/g, '+').replace(/_/g, '/');
       const padLen = (4 - (rawB64.length % 4)) % 4;

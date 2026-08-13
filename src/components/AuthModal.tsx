@@ -3,7 +3,7 @@ import { Mail, Lock, Building2, Sparkles, ArrowRight, ShieldCheck, CheckCircle2,
 import { loginUser, signupUser, loginWithOAuthProvider, verifyGoogleAuthWithBackend, getGoogleClientId, AuthSession, validatePasswordPolicy } from '../services/authService';
 import { AuthProviderType, EmailProviderType } from '../types/saas';
 import { GoogleLogo, ZohoLogo, AmusemacLogo } from './ProviderLogos';
-import { IS_DEV } from '../config/env';
+import { IS_DEV, BUILD_SHA } from '../config/env';
 
 declare global {
   interface Window {
@@ -421,22 +421,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
             )}
 
             {/* Footer Toggle */}
-            <div className="text-center text-xs text-slate-400 pt-2 border-t border-[#23273d]">
+            <div className="text-center text-xs text-slate-400 pt-2 border-t border-[#23273d] space-y-1">
               {mode === 'LOGIN' ? (
-                <span>
+                <div>
                   Don't have an account?{' '}
                   <button type="button" onClick={() => setMode('SIGNUP')} className="text-[#f5b82e] font-bold hover:underline">
                     Create Workspace
                   </button>
-                </span>
+                </div>
               ) : (
-                <span>
+                <div>
                   Already have an account?{' '}
                   <button type="button" onClick={() => setMode('LOGIN')} className="text-[#f5b82e] font-bold hover:underline">
                     Sign In
                   </button>
-                </span>
+                </div>
               )}
+              <div className="text-[10px] text-slate-600 font-mono pt-1">
+                Amusemac Growth Agent v2.0.0 ({BUILD_SHA})
+              </div>
             </div>
           </>
         )}

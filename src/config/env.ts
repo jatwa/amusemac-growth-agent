@@ -35,4 +35,4 @@ export function isValidGoogleClientId(clientId: string): boolean {
   if (!trimmed || trimmed.includes('YOUR_GOOGLE_CLIENT_ID') || trimmed.includes('google-client-id-dev')) return false;
   return GOOGLE_CLIENT_ID_REGEX.test(trimmed);
 }
-
+export const BUILD_SHA = (env as any).VITE_BUILD_SHA || '0958189';
