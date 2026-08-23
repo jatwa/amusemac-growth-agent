@@ -1,80 +1,99 @@
-/* AMUSEMAC GROWTH AGENT - SYSTEM LIGHT & DARK THEME SUPPORT */
+/* AMUSEMAC GROWTH AGENT - CENTRALIZED SEMANTIC THEME TOKEN SYSTEM */
 
 :root, html.dark {
-  --bg-main: #0b0c10;
-  --bg-card: #141620;
-  --bg-card-hover: #1b1e2c;
-  --text-main: #f1f5f9;
-  --text-muted: #94a3b8;
+  --bg-primary: #0b0c10;
+  --bg-secondary: #11131f;
+  --bg-tertiary: #131524;
+  --bg-surface: #141620;
+  --bg-elevated: #1a1d30;
+  --bg-hover: #1f243f;
+  --bg-active: #202640;
+
+  --bg-card: #131524;
+  --card-bg: #131524;
+  --bg-sidebar: #0f111a;
+  --sidebar-bg: #0f111a;
+  --bg-header: #12141d;
+  --bg-modal: #131524;
+  --modal-bg: #131524;
+  --bg-table-header: #171a2d;
+  --bg-table-row-hover: #1c2035;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #0f172a;
+
+  --border-primary: #23273e;
+  --border-secondary: #2a2f4a;
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-gold: rgba(245, 184, 46, 0.25);
-  --gold-accent: #f5b82e;
-  --gold-accent-hover: #e5a417;
+
+  --accent-gold: #f5b82e;
+  --accent-gold-hover: #e5a417;
+
+  --input-bg: #11131f;
+  --input-border: #2c324e;
+  --input-text: #f8fafc;
+  --input-placeholder: #64748b;
+
+  --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+
   color-scheme: dark;
 }
 
 html.light {
-  --bg-main: #f8fafc;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-tertiary: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f8fafc;
+  --bg-hover: #f1f5f9;
+  --bg-active: #e2e8f0;
+
   --bg-card: #ffffff;
-  --bg-card-hover: #f1f5f9;
-  --text-main: #0f172a;
-  --text-muted: #475569;
+  --bg-card-hover: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-header: #ffffff;
+  --bg-modal: #ffffff;
+  --bg-table-header: #f8fafc;
+  --bg-table-row-hover: #f1f5f9;
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-tertiary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
+
+  --border-primary: #e2e8f0;
+  --border-secondary: #cbd5e1;
   --border-subtle: rgba(0, 0, 0, 0.08);
   --border-gold: rgba(217, 148, 12, 0.35);
-  --gold-accent: #d9940c;
-  --gold-accent-hover: #b87a05;
+
+  --accent-gold: #d9940c;
+  --accent-gold-hover: #b87a05;
+
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-text: #0f172a;
+  --input-placeholder: #94a3b8;
+
+  --shadow-card: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
+
   color-scheme: light;
 }
 
 body {
   margin: 0;
-  background-color: var(--bg-main);
-  color: var(--text-main);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   overflow-x: hidden;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-html.light body {
-  background-color: #f8fafc;
-  color: #0f172a;
-}
-
-html.light .bg-\[\#0b0c10\] {
-  background-color: #f8fafc !important;
-}
-
-html.light .bg-\[\#10121a\] {
-  background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-}
-
-html.light .bg-\[\#141620\],
-html.light .bg-\[\#121422\],
-html.light .bg-\[\#151726\],
-html.light .bg-\[\#121420\],
-html.light .bg-\[\#141624\] {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #e2e8f0 !important;
-}
-
-html.light .text-white {
-  color: #0f172a !important;
-}
-
-html.light .text-slate-300,
-html.light .text-slate-400 {
-  color: #475569 !important;
-}
-
-html.light .border-\[\#202436\],
-html.light .border-\[\#2b304a\],
-html.light .border-\[\#23273d\],
-html.light .border-\[\#22273c\] {
-  border-color: #e2e8f0 !important;
-}
-
+/* Base Headings & Typography */
 h1, h2, h3, h4, .font-display {
   font-family: 'Outfit', 'Inter', sans-serif;
 }
@@ -83,32 +102,284 @@ code, pre, .font-mono {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-html.dark ::-webkit-scrollbar-thumb {
-  background: #282c3f;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #f5b82e;
+/* ==================================================
+ * LIGHT THEME COMPONENT OVERRIDES & TOKEN ADAPTATIONS
+ * ================================================== */
+
+html.light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
 }
 
-/* Glassmorphism Card Utility */
+/* Main App & Background Layout Containers */
+html.light .bg-\[\#0b0c10\],
+html.light .bg-\[\#0c0d12\],
+html.light .bg-\[\#0f111a\],
+html.light .bg-\[\#0f111c\],
+html.light .bg-\[\#12141d\] {
+  background-color: #f8fafc !important;
+}
+
+/* Cards, Modals, Containers & Panels */
+html.light .bg-\[\#10121a\],
+html.light .bg-\[\#10121e\],
+html.light .bg-\[\#121420\],
+html.light .bg-\[\#121422\],
+html.light .bg-\[\#131520\],
+html.light .bg-\[\#131524\],
+html.light .bg-\[\#141622\],
+html.light .bg-\[\#141624\],
+html.light .bg-\[\#141626\],
+html.light .bg-\[\#141724\],
+html.light .bg-\[\#141727\],
+html.light .bg-\[\#141728\],
+html.light .bg-\[\#151724\],
+html.light .bg-\[\#151726\],
+html.light .bg-\[\#15192c\],
+html.light .bg-\[\#161824\],
+html.light .bg-\[\#161826\],
+html.light .bg-\[\#161828\],
+html.light .bg-\[\#161926\],
+html.light .bg-\[\#161927\],
+html.light .bg-\[\#161928\],
+html.light .bg-\[\#161929\],
+html.light .bg-\[\#161a28\],
+html.light .bg-\[\#161a2e\],
+html.light .bg-\[\#17192b\],
+html.light .bg-\[\#171a28\],
+html.light .bg-\[\#171a2b\],
+html.light .bg-\[\#171a2c\],
+html.light .bg-\[\#171a2d\],
+html.light .bg-\[\#181a28\],
+html.light .bg-\[\#181a2a\],
+html.light .bg-\[\#181b28\],
+html.light .bg-\[\#181b29\],
+html.light .bg-\[\#181b2a\],
+html.light .bg-\[\#181b2c\],
+html.light .bg-\[\#181b2e\],
+html.light .bg-\[\#181d33\],
+html.light .bg-\[\#191c2b\],
+html.light .bg-\[\#191c2e\],
+html.light .bg-\[\#1a1d2e\],
+html.light .bg-\[\#1a1d30\],
+html.light .bg-\[\#1a1e30\],
+html.light .bg-\[\#1a1e35\],
+html.light .bg-\[\#1c2030\],
+html.light .bg-\[\#1c2032\],
+html.light .bg-\[\#1c2136\],
+html.light .bg-\[\#1d2136\],
+html.light .bg-\[\#1d2238\],
+html.light .bg-\[\#1d233a\],
+html.light .bg-\[\#1e2235\],
+html.light .bg-\[\#1e2338\],
+html.light .bg-\[\#1e243d\],
+html.light .bg-\[\#1f2336\],
+html.light .bg-\[\#1f2338\],
+html.light .bg-\[\#1f2438\],
+html.light .bg-\[\#1f243f\],
+html.light .bg-\[\#202538\],
+html.light .bg-\[\#20253b\],
+html.light .bg-\[\#20253c\],
+html.light .bg-\[\#20253f\],
+html.light .bg-\[\#202640\],
+html.light .bg-\[\#21263a\],
+html.light .bg-\[\#22273d\],
+html.light .bg-\[\#22273e\],
+html.light .bg-\[\#252a42\],
+html.light .bg-\[\#272d47\],
+html.light .bg-\[\#272e4a\],
+html.light .bg-\[\#272f4e\],
+html.light .bg-\[\#282d46\],
+html.light .bg-\[\#282e4a\],
+html.light .bg-\[\#282f4d\],
+html.light .bg-\[\#2c3350\],
+html.light .bg-\[\#2e3552\],
+html.light .bg-\[\#303754\] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Secondary Inputs, Selects & Badges in Light Mode */
+html.light input,
+html.light textarea,
+html.light select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Borders in Light Mode */
+html.light .border-\[\#1c2033\],
+html.light .border-\[\#1e2235\],
+html.light .border-\[\#1e2336\],
+html.light .border-\[\#1e2338\],
+html.light .border-\[\#1f243b\],
+html.light .border-\[\#202436\],
+html.light .border-\[\#202438\],
+html.light .border-\[\#212538\],
+html.light .border-\[\#21253a\],
+html.light .border-\[\#21263c\],
+html.light .border-\[\#21263d\],
+html.light .border-\[\#22263a\],
+html.light .border-\[\#22263b\],
+html.light .border-\[\#22263d\],
+html.light .border-\[\#22273c\],
+html.light .border-\[\#22273d\],
+html.light .border-\[\#22273e\],
+html.light .border-\[\#23273a\],
+html.light .border-\[\#23273c\],
+html.light .border-\[\#23273d\],
+html.light .border-\[\#23273e\],
+html.light .border-\[\#23283c\],
+html.light .border-\[\#23283e\],
+html.light .border-\[\#24283b\],
+html.light .border-\[\#24283c\],
+html.light .border-\[\#24283f\],
+html.light .border-\[\#24293e\],
+html.light .border-\[\#242944\],
+html.light .border-\[\#25293c\],
+html.light .border-\[\#25293d\],
+html.light .border-\[\#252940\],
+html.light .border-\[\#252a3f\],
+html.light .border-\[\#252a42\],
+html.light .border-\[\#262a3d\],
+html.light .border-\[\#262a42\],
+html.light .border-\[\#262a44\],
+html.light .border-\[\#262a45\],
+html.light .border-\[\#262b42\],
+html.light .border-\[\#262c44\],
+html.light .border-\[\#272b3f\],
+html.light .border-\[\#272b42\],
+html.light .border-\[\#272b45\],
+html.light .border-\[\#272c44\],
+html.light .border-\[\#272c46\],
+html.light .border-\[\#272f4e\],
+html.light .border-\[\#282d44\],
+html.light .border-\[\#282e47\],
+html.light .border-\[\#292f46\],
+html.light .border-\[\#292f48\],
+html.light .border-\[\#292f4c\],
+html.light .border-\[\#2a2f46\],
+html.light .border-\[\#2a2f47\],
+html.light .border-\[\#2a2f4a\],
+html.light .border-\[\#2a3048\],
+html.light .border-\[\#2a3152\],
+html.light .border-\[\#2b3046\],
+html.light .border-\[\#2b304c\],
+html.light .border-\[\#2b3149\],
+html.light .border-\[\#2b314a\],
+html.light .border-\[\#2b3252\],
+html.light .border-\[\#2c3147\],
+html.light .border-\[\#2c324a\],
+html.light .border-\[\#2c324e\],
+html.light .border-\[\#2c3454\],
+html.light .border-\[\#2d334d\],
+html.light .border-\[\#2d334e\],
+html.light .border-\[\#2d3452\],
+html.light .border-\[\#2d3557\],
+html.light .border-\[\#2e344e\],
+html.light .border-\[\#2e3556\],
+html.light .border-\[\#2e3657\],
+html.light .border-\[\#2e365b\],
+html.light .border-\[\#2f375a\],
+html.light .border-\[\#303754\],
+html.light .border-\[\#384066\],
+html.light .border-\[\#3b446e\] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Typography Contrast in Light Mode */
+html.light .text-white,
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-300,
+html.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+html.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* EXCEPTIONS: Preserve Contrast on Brand Buttons, Gradients, and Colored Badges */
+html.light .btn-gold,
+html.light .btn-gold *,
+html.light .bg-blue-600,
+html.light .bg-blue-600 *,
+html.light .bg-indigo-600,
+html.light .bg-indigo-600 *,
+html.light .bg-emerald-600,
+html.light .bg-emerald-600 *,
+html.light .bg-rose-600,
+html.light .bg-rose-600 *,
+html.light .bg-amber-600,
+html.light .bg-amber-600 *,
+html.light .bg-purple-600,
+html.light .bg-purple-600 *,
+html.light .bg-slate-900,
+html.light .bg-slate-800,
+html.light .bg-gradient-to-r *,
+html.light .bg-gradient-to-tr * {
+  color: inherit;
+}
+
+html.light .text-gold-gradient {
+  background: linear-gradient(135deg, #d9940c 0%, #b87a05 50%, #966203 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Light Theme Gradient Container Overrides */
+html.light .from-\[\#171a2c\],
+html.light .from-\[\#151728\],
+html.light .from-\[\#171929\],
+html.light .from-\[\#141728\],
+html.light .from-\[\#131524\] {
+  --tw-gradient-from: #f8fafc !important;
+  --tw-gradient-to: #ffffff !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+html.light .via-\[\#1b1f36\],
+html.light .via-\[\#1a1e35\],
+html.light .via-\[\#1a1d30\],
+html.light .via-\[\#191c2e\] {
+  --tw-gradient-stops: var(--tw-gradient-from), #ffffff, var(--tw-gradient-to) !important;
+}
+
+html.light .to-\[\#121420\],
+html.light .to-\[\#121422\],
+html.light .to-\[\#171929\] {
+  --tw-gradient-to: #f1f5f9 !important;
+}
+
+/* Hover States in Light Mode */
+html.light .hover\:bg-\[\#1f243f\]:hover,
+html.light .hover\:bg-\[\#1f2338\]:hover,
+html.light .hover\:bg-\[\#181a28\]:hover,
+html.light .hover\:bg-\[\#161826\]:hover,
+html.light .hover\:bg-\[\#1e2235\]:hover,
+html.light .hover\:bg-\[\#282d46\]:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* Glassmorphism Cards in Light Mode */
 .glass-card {
   background: var(--bg-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-card);
 }
 
 .glass-card-gold {
@@ -123,17 +394,10 @@ html.light .glass-card-gold {
   border: 1px solid rgba(217, 148, 12, 0.4) !important;
 }
 
-/* Gold Gradient Text */
-.text-gold-gradient {
-  background: linear-gradient(135deg, #f5b82e 0%, #fbd872 50%, #d49b19 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* Button Animations */
+/* Gold Button Style */
 .btn-gold {
   background: linear-gradient(135deg, #f5b82e 0%, #d49b19 100%);
-  color: #0c0d12;
+  color: #0c0d12 !important;
   font-weight: 700;
   transition: all 0.2s ease-in-out;
   box-shadow: 0 4px 15px rgba(245, 184, 46, 0.25);
@@ -143,6 +407,25 @@ html.light .glass-card-gold {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(245, 184, 46, 0.4);
   filter: brightness(1.05);
+}
+
+/* Custom Theme-Aware Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #282c3f;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #f5b82e;
 }
 
 /* Pulse animation for live indicators */

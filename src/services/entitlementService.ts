@@ -27,8 +27,10 @@ export function hasPermission(user: UserAccount | null, requiredRole: UserRole):
   if (!user) return false;
   const roleHierarchy: Record<UserRole, number> = {
     SUPER_ADMIN: 5,
+    BACKEND_ADMIN: 5,
     ADMIN: 4,
     MANAGER: 3,
+    TEAM_MEMBER: 2,
     SALES_USER: 2,
     VIEWER: 1
   };

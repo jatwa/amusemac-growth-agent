@@ -36,3 +36,4 @@ export function isValidGoogleClientId(clientId: string): boolean {
   return GOOGLE_CLIENT_ID_REGEX.test(trimmed);
 }
 export const BUILD_SHA = (env as any).VITE_BUILD_SHA || '0958189';
+export const ENABLE_OAUTH_BUTTONS = (env as any).VITE_ENABLE_OAUTH === 'true';

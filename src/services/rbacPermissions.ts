@@ -22,6 +22,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessSuperAdmin: true,
     canEditClientIcp: true
   },
+  BACKEND_ADMIN: {
+    canSearchLeads: true,
+    canEditCrm: true,
+    canSendEmails: true,
+    canExportCsv: true,
+    canManageTeam: true,
+    canConfigureIntegrations: true,
+    canAccessSuperAdmin: true,
+    canEditClientIcp: true
+  },
   ADMIN: {
     canSearchLeads: true,
     canEditCrm: true,
@@ -31,6 +41,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canConfigureIntegrations: true,
     canAccessSuperAdmin: false,
     canEditClientIcp: true
+  },
+  TEAM_MEMBER: {
+    canSearchLeads: true,
+    canEditCrm: true,
+    canSendEmails: true,
+    canExportCsv: true,
+    canManageTeam: false,
+    canConfigureIntegrations: false,
+    canAccessSuperAdmin: false,
+    canEditClientIcp: false
   },
   MANAGER: {
     canSearchLeads: true,

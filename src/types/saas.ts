@@ -1,4 +1,4 @@
-export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'SALES_USER' | 'VIEWER';
+export type UserRole = 'SUPER_ADMIN' | 'BACKEND_ADMIN' | 'ADMIN' | 'TEAM_MEMBER' | 'MANAGER' | 'SALES_USER' | 'VIEWER';
 
 export type OrgStatus = 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED' | 'CANCELLED';
 

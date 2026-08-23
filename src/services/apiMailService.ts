@@ -160,12 +160,12 @@ export async function saveDraftEmail(payload: any): Promise<{ success: boolean; 
   return { success: false };
 }
 
-export async function markEmailAsRead(emailId: string): Promise<{ success: boolean }> {
+export async function markEmailAsRead(emailId: string, readState: boolean = true): Promise<{ success: boolean }> {
   try {
     const res = await fetch('/api/mail/read', {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ emailId })
+      body: JSON.stringify({ emailId, readState })
     });
     if (res.ok) {
       return await res.json();
@@ -180,6 +180,48 @@ export async function moveEmailToTrash(emailId: string): Promise<{ success: bool
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ emailId })
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {}
+  return { success: false };
+}
+
+export async function restoreEmailFromTrash(emailId: string): Promise<{ success: boolean }> {
+  try {
+    const res = await fetch('/api/mail/restore', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ emailId })
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {}
+  return { success: false };
+}
+
+export async function permanentlyDeleteEmail(emailId: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const res = await fetch('/api/mail/permanent-delete', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ emailId })
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {}
+  return { success: false, message: 'Server request failed.' };
+}
+
+export async function performBulkMailAction(emailIds: string[], action: 'markRead' | 'markUnread' | 'trash' | 'restore' | 'permanentDelete'): Promise<{ success: boolean; processedCount?: number; logs?: EmailMessage[] }> {
+  try {
+    const res = await fetch('/api/mail/bulk', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ emailIds, action })
     });
     if (res.ok) {
       return await res.json();

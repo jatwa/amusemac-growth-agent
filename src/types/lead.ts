@@ -148,7 +148,7 @@ export interface ScoreBreakdown {
   evidence: string;
 }
 
-export type VerificationStatus = 'VERIFIED_SOURCE' | 'AI_INFERRED' | 'UNVERIFIED';
+export type VerificationStatus = 'VERIFIED_SOURCE' | 'AI_INFERRED' | 'UNVERIFIED' | 'LOCAL_DATASET' | 'DISCOVERED' | 'UNVERIFIED_DEMO';
 
 export interface LeadProvenance {
   company: string;

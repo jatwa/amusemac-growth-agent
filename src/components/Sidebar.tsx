@@ -50,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const visibleNavItems = allNavItems.filter(item => !item.requiresAdmin || isAdminAuthorized);
 
   return (
-    <aside className="w-64 bg-[#10121a] border-r border-[#202436] flex flex-col justify-between py-6 min-h-[calc(100vh-5rem)]">
+    <aside className="w-64 bg-[#10121a] border-r border-[#202436] hidden lg:flex flex-col justify-between py-6 min-h-[calc(100vh-5rem)] shrink-0">
       <div className="space-y-1 px-3">
         <div className="px-4 py-2 text-[11px] font-bold tracking-wider text-slate-500 uppercase">
           Growth Navigation

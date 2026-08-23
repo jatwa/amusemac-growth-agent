@@ -50,7 +50,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onImportLeads,
   activeOrg
 }) => {
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'email' | 'sheets' | 'connected' | 'backup'>('connected');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'email' | 'sheets' | 'connected' | 'backup' | 'team'>('connected');
 
   const [webhookInput, setWebhookInput] = useState(webhookUrl);
   const [apiKeyInput, setApiKeyInput] = useState(geminiApiKey);
@@ -58,8 +58,45 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [zohoStatus, setZohoStatus] = useState<ZohoMailConfigStatus | null>(null);
   const [testRecipient, setTestRecipient] = useState('');
 
+  // Presence State
+  const [teamPresence, setTeamPresence] = useState<any[]>([]);
+  const [isLoadingPresence, setIsLoadingPresence] = useState(false);
+  const [selectedUserPresence, setSelectedUserPresence] = useState<any | null>(null);
+
   const mailboxes = activeOrg ? getOrgMailboxes(activeOrg.orgId) : [];
   const isAmusemacStudio = activeOrg?.orgId === 'amusemac-studio';
+
+  const loadTeamPresence = async () => {
+    setIsLoadingPresence(true);
+    try {
+      let token = '';
+      if (typeof localStorage !== 'undefined') {
+        try {
+          const sess = JSON.parse(localStorage.getItem('amusemac_auth_session') || '{}');
+          token = sess.token || '';
+        } catch (e) {}
+      }
+      const res = await fetch('/api/admin/presence', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.presence)) {
+        setTeamPresence(data.presence);
+      }
+    } catch (e) {
+      console.error('[Presence Error]', e);
+    } finally {
+      setIsLoadingPresence(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSettingsTab === 'team') {
+      loadTeamPresence();
+      const timer = setInterval(loadTeamPresence, 10000);
+      return () => clearInterval(timer);
+    }
+  }, [activeSettingsTab]);
 
   // Sync Status State
   const [syncStatus, setSyncStatus] = useState<'Connected' | 'Syncing' | 'Synced' | 'Failed' | 'Disconnected'>(
@@ -226,6 +263,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveSettingsTab('team')}
+          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            activeSettingsTab === 'team'
+              ? 'bg-[#f5b82e] text-[#0c0d12] shadow-md shadow-[#f5b82e]/20'
+              : 'bg-[#151724] text-slate-400 hover:text-white border border-[#22273d]'
+          }`}
+        >
+          <ShieldIcon className="w-4 h-4 text-emerald-400" />
+          <span>Team Members & Online Presence</span>
+        </button>
+
+        <button
           onClick={() => setActiveSettingsTab('sheets')}
           className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
             activeSettingsTab === 'sheets'
@@ -261,6 +310,135 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <span>Database & Backup</span>
         </button>
       </div>
+
+      {/* Team Presence Section */}
+      {activeSettingsTab === 'team' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="glass-card p-6 rounded-2xl border border-[#202436] space-y-4">
+            <div className="flex items-center justify-between border-b border-[#23273d] pb-3">
+              <div>
+                <h3 className="text-base font-bold text-white font-display">WORKSPACE TEAM MEMBERS & PRESENCE MONITORING</h3>
+                <p className="text-xs text-slate-400">
+                  Real-time active login monitoring, heartbeat tracking, and operational search usage statistics.
+                </p>
+              </div>
+              <button
+                onClick={loadTeamPresence}
+                className="px-3 py-1.5 rounded-xl bg-[#1e2235] text-slate-300 hover:text-white border border-[#2c324a] text-xs font-bold flex items-center space-x-1.5"
+              >
+                <RefreshIcon className={`w-3.5 h-3.5 ${isLoadingPresence ? 'animate-spin' : ''}`} />
+                <span>Refresh Status</span>
+              </button>
+            </div>
+
+            {/* Team Members List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {teamPresence.map((member) => {
+                const isOnline = member.status === 'ONLINE';
+                return (
+                  <div
+                    key={member.userId || member.email}
+                    onClick={() => setSelectedUserPresence(member)}
+                    className="p-4 rounded-xl border border-[#23273d] bg-[#141625] hover:border-[#f5b82e]/40 cursor-pointer transition-all space-y-3 shadow-md"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full bg-[#1e2235] border border-[#2e344e] flex items-center justify-center font-bold text-white text-sm">
+                            {(member.userName || member.email || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#141625] ${
+                            isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'
+                          }`} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white text-sm">{member.userName || member.email}</h4>
+                          <p className="text-xs text-slate-400">{member.email}</p>
+                        </div>
+                      </div>
+
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                        isOnline
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          : 'bg-slate-500/10 text-slate-400 border-slate-500/30'
+                      }`}>
+                        {isOnline ? 'ONLINE' : 'OFFLINE'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-[#1f2338]">
+                      <div>
+                        <span className="text-slate-500 block">Role</span>
+                        <span className="font-bold text-slate-200">{member.role || 'TEAM_MEMBER'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Last Seen</span>
+                        <span className="font-semibold text-slate-300">
+                          {member.lastSeenAt ? new Date(member.lastSeenAt).toLocaleTimeString() : 'Recently'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Searches Today</span>
+                        <span className="font-bold text-[#f5b82e]">{member.searchesToday || 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Total Searches</span>
+                        <span className="font-bold text-sky-400">{member.totalSearches || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Detailed User Presence Modal */}
+          {selectedUserPresence && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+              <div className="glass-card-gold p-6 rounded-2xl max-w-lg w-full border border-[#f5b82e]/40 space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[#2d3248] pb-3">
+                  <div className="flex items-center space-x-3">
+                    <span className={`w-3.5 h-3.5 rounded-full ${
+                      selectedUserPresence.status === 'ONLINE' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'
+                    }`} />
+                    <h3 className="text-lg font-bold text-white font-display">{selectedUserPresence.userName}</h3>
+                  </div>
+                  <button
+                    onClick={() => setSelectedUserPresence(null)}
+                    className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div className="p-3 rounded-xl bg-[#141625] border border-[#23273d] space-y-1.5">
+                    <p><strong className="text-slate-400">Email:</strong> <span className="text-white font-mono">{selectedUserPresence.email}</span></p>
+                    <p><strong className="text-slate-400">User ID:</strong> <span className="text-slate-300 font-mono">{selectedUserPresence.userId}</span></p>
+                    <p><strong className="text-slate-400">Role:</strong> <span className="text-emerald-400 font-bold">{selectedUserPresence.role}</span></p>
+                    <p><strong className="text-slate-400">Workspace:</strong> <span className="text-white">{selectedUserPresence.orgId}</span></p>
+                    <p><strong className="text-slate-400">Current Status:</strong> <span className={selectedUserPresence.status === 'ONLINE' ? 'text-emerald-400 font-bold' : 'text-slate-400'}>{selectedUserPresence.status}</span></p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#141625] border border-[#23273d] space-y-1.5">
+                    <p><strong className="text-slate-400">Last Login:</strong> <span className="text-slate-200">{selectedUserPresence.lastLoginAt ? new Date(selectedUserPresence.lastLoginAt).toLocaleString() : 'N/A'}</span></p>
+                    <p><strong className="text-slate-400">Last Seen:</strong> <span className="text-slate-200">{selectedUserPresence.lastSeenAt ? new Date(selectedUserPresence.lastSeenAt).toLocaleString() : 'N/A'}</span></p>
+                    <p><strong className="text-slate-400">Last Logout:</strong> <span className="text-slate-200">{selectedUserPresence.lastLogoutAt ? new Date(selectedUserPresence.lastLogoutAt).toLocaleString() : 'Active / None'}</span></p>
+                    <p><strong className="text-slate-400">Active Devices/Sessions:</strong> <span className="text-sky-400 font-bold">{selectedUserPresence.activeSessionCount || (selectedUserPresence.status === 'ONLINE' ? 1 : 0)}</span></p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedUserPresence(null)}
+                  className="w-full py-2.5 rounded-xl bg-[#1e2235] hover:bg-[#272d47] text-white font-bold text-xs"
+                >
+                  Close Details
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Connected Accounts Section */}
       {activeSettingsTab === 'connected' && (

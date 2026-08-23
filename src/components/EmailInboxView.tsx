@@ -14,16 +14,18 @@ import {
   Paperclip,
   Search,
   Eye,
-  Link,
+  ChevronLeft,
   ChevronRight,
-  Clock,
-  Sparkles,
   ShieldCheck,
-  Tag
+  RotateCcw,
+  CheckSquare,
+  Square,
+  AlertTriangle
 } from 'lucide-react';
 import { Lead, SalesStatus } from '../types/lead';
 import { EmailMessage, EmailAttachment } from '../types/email';
 import { REUSABLE_EMAIL_TEMPLATES, populateTemplateVariables } from '../data/emailTemplates';
+import { RichTextEmailComposer } from './RichTextEmailComposer';
 import {
   sendZohoEmail,
   syncZohoInbox,
@@ -31,7 +33,10 @@ import {
   associateEmailToLead,
   saveDraftEmail,
   markEmailAsRead,
-  moveEmailToTrash
+  moveEmailToTrash,
+  restoreEmailFromTrash,
+  permanentlyDeleteEmail,
+  performBulkMailAction
 } from '../services/apiMailService';
 
 import { Organization } from '../types/saas';
@@ -61,6 +66,18 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Bulk Selection State
+  const [selectedEmailIds, setSelectedEmailIds] = useState<string[]>([]);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+  // Confirm Delete Modal State
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Compose Modal State
   const [showComposer, setShowComposer] = useState(false);
@@ -74,18 +91,25 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
 
-  // Load all logs from API
+  // Load logs from backend
   const loadLogs = async () => {
     const logs = await fetchEmailLogs();
     setEmailLogs(logs);
     if (logs.length > 0 && !selectedMessage) {
-      setSelectedMessage(logs[0]);
+      const firstValid = logs.find(e => e.status !== 'TRASH') || logs[0];
+      setSelectedMessage(firstValid);
     }
   };
 
   useEffect(() => {
     loadLogs();
   }, []);
+
+  // Reset pagination & selection when changing folder or search
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedEmailIds([]);
+  }, [activeFolder, searchTerm]);
 
   // Filtered Email Lists per Folder
   const inboxMessages = emailLogs.filter(e => e.direction === 'INBOUND' && e.status !== 'TRASH');
@@ -96,8 +120,8 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
 
   const unreadCount = inboxMessages.filter(e => e.readStatus === 'UNREAD').length;
 
-  // Folder Display Items
-  const currentFolderMessages = () => {
+  // Compute folder list based on active tab and search query
+  const getFolderList = (): EmailMessage[] => {
     let list: EmailMessage[] = [];
     if (activeFolder === 'inbox') list = inboxMessages;
     else if (activeFolder === 'sent') list = sentMessages;
@@ -117,20 +141,28 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
     return list;
   };
 
-  const currentLead = leads.find(l => l.leadId === selectedLeadId) || leads[0];
-  const currentThreadMessages = emailLogs.filter(e => e.leadId === currentLead?.leadId && e.status !== 'TRASH').sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  const folderList = getFolderList();
+  const totalPages = Math.max(1, Math.ceil(folderList.length / PAGE_SIZE));
+  const paginatedList = folderList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const currentLead = leads.find(l => l.leadId === selectedLeadId) || leads[0];
+  const currentThreadMessages = emailLogs
+    .filter(e => e.leadId === currentLead?.leadId && e.status !== 'TRASH')
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  // Handlers
   const handleSyncInbox = async () => {
     setIsSyncing(true);
     setSyncNotice('Connecting to Zoho IMAP (imappro.zoho.com:993)...');
+    setErrorMessage('');
 
     const result = await syncZohoInbox(leads);
-    setSyncNotice(result.message);
-
-    if (result.logs) {
-      setEmailLogs(result.logs);
+    if (result.success) {
+      setSyncNotice(result.message);
+      if (result.logs) setEmailLogs(result.logs);
+      else await loadLogs();
     } else {
-      await loadLogs();
+      setErrorMessage(result.message || 'Unable to sync mailbox. Please try again.');
     }
 
     if (result.newReplies && result.newReplies.length > 0) {
@@ -146,7 +178,7 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
     }
 
     setIsSyncing(false);
-    setTimeout(() => setSyncNotice(''), 4000);
+    setTimeout(() => setSyncNotice(''), 5000);
   };
 
   const handleOpenComposer = (targetLead?: Lead, initialDraft?: EmailMessage) => {
@@ -218,7 +250,7 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
     if (!composerTo || !composerSubject || !composerBody) return;
 
     setIsSending(true);
-    setSyncNotice('Connecting to Zoho SMTP (smtppro.zoho.com:465)...');
+    setSyncNotice('Sending email via Zoho SMTP (smtppro.zoho.com:465)...');
 
     const res = await sendZohoEmail({
       to: composerTo,
@@ -230,7 +262,7 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
     });
 
     if (res.success) {
-      setSyncNotice('Test email sent successfully through Zoho Mail.');
+      setSyncNotice('Email sent successfully through Zoho Mail.');
       if (composerLeadId) {
         onUpdateLeadStatus(composerLeadId, 'CONTACTED');
         onUpdateLeadDetails(composerLeadId, {
@@ -241,7 +273,7 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
       setShowComposer(false);
       await loadLogs();
     } else {
-      setSyncNotice(res.message);
+      setErrorMessage(res.message);
     }
 
     setIsSending(false);
@@ -251,15 +283,44 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
   const handleSelectMessage = (msg: EmailMessage) => {
     setSelectedMessage(msg);
     if (msg.readStatus === 'UNREAD') {
-      markEmailAsRead(msg.emailId);
+      markEmailAsRead(msg.emailId, true);
       setEmailLogs(prev => prev.map(m => m.emailId === msg.emailId ? { ...m, readStatus: 'READ' } : m));
     }
   };
 
   const handleMoveToTrash = async (emailId: string) => {
     await moveEmailToTrash(emailId);
-    setSyncNotice('Message moved to Trash.');
+    setSyncNotice('Message moved to Trash in Zoho mailbox.');
     await loadLogs();
+    if (selectedMessage?.emailId === emailId) {
+      const remaining = emailLogs.filter(e => e.emailId !== emailId && e.status !== 'TRASH');
+      setSelectedMessage(remaining[0] || null);
+    }
+    setTimeout(() => setSyncNotice(''), 3000);
+  };
+
+  const handleRestoreFromTrash = async (emailId: string) => {
+    await restoreEmailFromTrash(emailId);
+    setSyncNotice('Message restored to original folder in Zoho mailbox.');
+    await loadLogs();
+    setTimeout(() => setSyncNotice(''), 3000);
+  };
+
+  const handleConfirmDeletePermanently = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeleting(true);
+    const res = await permanentlyDeleteEmail(deleteConfirmId);
+    if (res.success) {
+      setSyncNotice('Message permanently deleted from Zoho mailbox and database.');
+      if (selectedMessage?.emailId === deleteConfirmId) {
+        setSelectedMessage(null);
+      }
+      await loadLogs();
+    } else {
+      setErrorMessage(res.message || 'Unable to delete message permanently.');
+    }
+    setIsDeleting(false);
+    setDeleteConfirmId(null);
     setTimeout(() => setSyncNotice(''), 3000);
   };
 
@@ -269,6 +330,43 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
       onUpdateLeadStatus(leadId, 'REPLIED');
       setSyncNotice('Associated client email to lead and updated status to REPLIED!');
       await loadLogs();
+    }
+    setTimeout(() => setSyncNotice(''), 3000);
+  };
+
+  // Checkbox Selection Helpers
+  const toggleSelectAll = () => {
+    if (selectedEmailIds.length === paginatedList.length) {
+      setSelectedEmailIds([]);
+    } else {
+      setSelectedEmailIds(paginatedList.map(e => e.emailId));
+    }
+  };
+
+  const toggleSelectEmail = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedEmailIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkAction = async (action: 'markRead' | 'markUnread' | 'trash' | 'restore' | 'permanentDelete') => {
+    if (selectedEmailIds.length === 0) return;
+
+    if (action === 'permanentDelete') {
+      // Prompt confirmation for permanent delete
+      setDeleteConfirmId(selectedEmailIds[0]);
+      return;
+    }
+
+    setSyncNotice(`Processing bulk ${action} action on ${selectedEmailIds.length} message(s)...`);
+    const res = await performBulkMailAction(selectedEmailIds, action);
+    if (res.success) {
+      setSyncNotice(`Bulk action '${action}' completed successfully.`);
+      setSelectedEmailIds([]);
+      await loadLogs();
+    } else {
+      setErrorMessage('Bulk action failed.');
     }
     setTimeout(() => setSyncNotice(''), 3000);
   };
@@ -283,10 +381,10 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
             <span>ZOHO MAILBOX (hello@amusemacstudio.in)</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-white">
-            EMAIL & <span className="text-gold-gradient">THREADS WORKBENCH</span>
+            ENTERPRISE <span className="text-gold-gradient">MAILBOX CLIENT</span>
           </h2>
           <p className="text-xs text-slate-300 mt-1">
-            Real enterprise mailbox client connected to Zoho SMTP (465 SSL) and IMAP (993 SSL)
+            Real email client synced with Zoho SMTP (465 SSL) & IMAP (993 SSL) • Permanent Delete & Sync Engine
           </p>
         </div>
 
@@ -310,10 +408,23 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
         </div>
       </div>
 
+      {/* Notifications Banners */}
       {syncNotice && (
         <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-400 flex items-center space-x-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{syncNotice}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs font-bold text-rose-400 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={() => setErrorMessage('')} className="text-slate-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -338,10 +449,12 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
                 <Inbox className="w-4 h-4" />
                 <span>INBOX</span>
               </div>
-              {unreadCount > 0 && (
+              {unreadCount > 0 ? (
                 <span className="px-2 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full">
                   {unreadCount}
                 </span>
+              ) : (
+                <span className="text-[11px] opacity-70">{inboxMessages.length}</span>
               )}
             </button>
 
@@ -425,7 +538,7 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
             </button>
           </div>
 
-          {/* Quick Lead Selector for Threads View */}
+          {/* Lead Thread Selector */}
           {activeFolder === 'threads' && (
             <div className="glass-card p-4 rounded-2xl border border-[#202436] space-y-2 max-h-[40vh] overflow-y-auto">
               <div className="px-2 text-[10px] font-bold text-slate-500 uppercase">Select Lead Thread</div>
@@ -457,7 +570,6 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
           {/* Threads View Mode */}
           {activeFolder === 'threads' && currentLead ? (
             <div className="space-y-4">
-              {/* Lead Thread Header */}
               <div className="glass-card p-5 rounded-2xl border border-[#202436] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-bold font-display text-white">{currentLead.companyName} Thread</h3>
@@ -474,7 +586,6 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
                 </button>
               </div>
 
-              {/* Thread Timeline Messages */}
               <div className="space-y-4 max-h-[62vh] overflow-y-auto pr-1">
                 {currentThreadMessages.length === 0 ? (
                   <div className="glass-card p-12 rounded-2xl text-center text-slate-400 space-y-2">
@@ -531,66 +642,158 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
             /* Split Pane Email List & Reader View for INBOX, SENT, UNASSIGNED, DRAFTS, TRASH */
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
               {/* Left Email List (5 cols) */}
-              <div className="md:col-span-5 glass-card p-4 rounded-2xl border border-[#202436] space-y-3 max-h-[70vh] overflow-y-auto">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search folder emails..."
-                    className="w-full bg-[#141624] border border-[#22273c] text-white text-xs rounded-xl pl-9 pr-3 py-2 outline-none"
-                  />
-                </div>
+              <div className="md:col-span-5 glass-card p-4 rounded-2xl border border-[#202436] space-y-3 max-h-[72vh] flex flex-col justify-between">
+                <div className="space-y-3 overflow-y-auto pr-1">
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder={`Search ${activeFolder}...`}
+                      className="w-full bg-[#141624] border border-[#22273c] text-white text-xs rounded-xl pl-9 pr-3 py-2 outline-none"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  {currentFolderMessages().length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 text-xs">
-                      No messages found in {activeFolder.toUpperCase()}.
-                    </div>
-                  ) : (
-                    currentFolderMessages().map((msg) => {
-                      const isSel = selectedMessage?.emailId === msg.emailId;
-                      const isUnread = msg.readStatus === 'UNREAD';
+                  {/* Bulk Actions Header Bar */}
+                  <div className="flex items-center justify-between px-1 py-1 text-xs border-b border-[#22273c]">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="flex items-center space-x-1.5 text-slate-400 hover:text-white font-semibold text-[11px]"
+                    >
+                      {selectedEmailIds.length > 0 && selectedEmailIds.length === paginatedList.length ? (
+                        <CheckSquare className="w-4 h-4 text-[#f5b82e]" />
+                      ) : (
+                        <Square className="w-4 h-4 text-slate-500" />
+                      )}
+                      <span>Select All</span>
+                    </button>
 
-                      return (
-                        <button
-                          key={msg.emailId}
-                          onClick={() => handleSelectMessage(msg)}
-                          className={`w-full text-left p-3.5 rounded-xl border transition-all ${
-                            isSel
-                              ? 'bg-[#f5b82e]/10 border-[#f5b82e] text-white shadow-md'
-                              : isUnread
-                              ? 'bg-[#1a1e30] border-purple-500/40 text-white font-bold'
-                              : 'bg-[#141624] border-[#22273c] text-slate-300 hover:bg-[#1a1e30]'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold truncate max-w-[170px]">{msg.direction === 'OUTBOUND' ? msg.to : msg.from}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">{new Date(msg.timestamp).toLocaleDateString()}</span>
-                          </div>
+                    {selectedEmailIds.length > 0 && (
+                      <div className="flex items-center space-x-1.5">
+                        {activeFolder === 'trash' ? (
+                          <>
+                            <button
+                              onClick={() => handleBulkAction('restore')}
+                              className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold"
+                            >
+                              Restore
+                            </button>
+                            <button
+                              onClick={() => handleBulkAction('permanentDelete')}
+                              className="px-2 py-1 rounded bg-rose-500/20 text-rose-300 text-[10px] font-bold"
+                            >
+                              Delete Perm.
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleBulkAction('markRead')}
+                              className="px-2 py-1 rounded bg-[#20253c] text-slate-300 text-[10px] font-bold"
+                            >
+                              Mark Read
+                            </button>
+                            <button
+                              onClick={() => handleBulkAction('trash')}
+                              className="px-2 py-1 rounded bg-rose-500/20 text-rose-300 text-[10px] font-bold"
+                            >
+                              Trash
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-                          <div className="text-xs font-bold mt-1 text-white truncate">{msg.subject}</div>
-                          <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5 font-normal">{msg.body}</p>
+                  {/* List Items */}
+                  <div className="space-y-2">
+                    {paginatedList.length === 0 ? (
+                      <div className="p-8 text-center text-slate-400 text-xs">
+                        No messages in {activeFolder.toUpperCase()}.
+                      </div>
+                    ) : (
+                      paginatedList.map((msg) => {
+                        const isSel = selectedMessage?.emailId === msg.emailId;
+                        const isUnread = msg.readStatus === 'UNREAD';
+                        const isChecked = selectedEmailIds.includes(msg.emailId);
 
-                          <div className="flex items-center justify-between text-[10px] mt-2 pt-1.5 border-t border-[#1e2338]">
-                            <span className={`px-2 py-0.5 rounded font-bold ${
-                              msg.direction === 'OUTBOUND' ? 'bg-[#f5b82e]/20 text-[#f5b82e]' : 'bg-purple-500/20 text-purple-400'
-                            }`}>
-                              {msg.direction}
-                            </span>
-                            {msg.autoMatched && (
-                              <span className="text-emerald-400 font-semibold flex items-center space-x-1">
-                                <CheckCircle2 className="w-3 h-3" />
-                                <span>Linked to Lead</span>
+                        return (
+                          <div
+                            key={msg.emailId}
+                            onClick={() => handleSelectMessage(msg)}
+                            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                              isSel
+                                ? 'bg-[#f5b82e]/10 border-[#f5b82e] text-white shadow-md'
+                                : isUnread
+                                ? 'bg-[#1a1e30] border-purple-500/40 text-white font-bold'
+                                : 'bg-[#141624] border-[#22273c] text-slate-300 hover:bg-[#1a1e30]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center space-x-2 truncate max-w-[170px]">
+                                <button onClick={(e) => toggleSelectEmail(msg.emailId, e)}>
+                                  {isChecked ? (
+                                    <CheckSquare className="w-3.5 h-3.5 text-[#f5b82e]" />
+                                  ) : (
+                                    <Square className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
+                                  )}
+                                </button>
+                                <span className="font-bold truncate">{msg.direction === 'OUTBOUND' ? msg.to : msg.from}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-500 font-mono shrink-0">{new Date(msg.timestamp).toLocaleDateString()}</span>
+                            </div>
+
+                            <div className="text-xs font-bold mt-1 text-white truncate">{msg.subject}</div>
+                            <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5 font-normal">{msg.body}</p>
+
+                            <div className="flex items-center justify-between text-[10px] mt-2 pt-1.5 border-t border-[#1e2338]">
+                              <span className={`px-2 py-0.5 rounded font-bold ${
+                                msg.direction === 'OUTBOUND' ? 'bg-[#f5b82e]/20 text-[#f5b82e]' : 'bg-purple-500/20 text-purple-400'
+                              }`}>
+                                {msg.direction}
                               </span>
-                            )}
+                              {msg.autoMatched && (
+                                <span className="text-emerald-400 font-semibold flex items-center space-x-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Linked</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </button>
-                      );
-                    })
-                  )}
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
+
+                {/* Pagination Controls */}
+                {folderList.length > 0 && (
+                  <div className="pt-3 border-t border-[#202436] flex items-center justify-between text-xs text-slate-400">
+                    <span>
+                      Showing {Math.min((currentPage - 1) * PAGE_SIZE + 1, folderList.length)}–{Math.min(currentPage * PAGE_SIZE, folderList.length)} of {folderList.length}
+                    </span>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        className="p-1 rounded-lg bg-[#141624] border border-[#23273c] disabled:opacity-40 hover:text-white"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="font-mono font-bold text-white">{currentPage} / {totalPages}</span>
+                      <button
+                        disabled={currentPage >= totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        className="p-1 rounded-lg bg-[#141624] border border-[#23273c] disabled:opacity-40 hover:text-white"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Right Email Reader (7 cols) */}
@@ -608,7 +811,24 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
                       </span>
 
                       <div className="flex items-center space-x-2">
-                        {activeFolder === 'drafts' ? (
+                        {activeFolder === 'trash' ? (
+                          <>
+                            <button
+                              onClick={() => handleRestoreFromTrash(selectedMessage.emailId)}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-xs font-bold flex items-center space-x-1"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Restore</span>
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(selectedMessage.emailId)}
+                              className="px-3 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 text-xs font-bold flex items-center space-x-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete Permanently</span>
+                            </button>
+                          </>
+                        ) : activeFolder === 'drafts' ? (
                           <button
                             onClick={() => handleOpenComposer(undefined, selectedMessage)}
                             className="btn-gold px-3 py-1.5 rounded-lg text-xs font-bold"
@@ -616,20 +836,22 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
                             Edit & Send Draft
                           </button>
                         ) : (
-                          <button
-                            onClick={() => handleOpenComposer(leads.find(l => l.leadId === selectedMessage.leadId))}
-                            className="btn-gold px-3 py-1.5 rounded-lg text-xs font-bold"
-                          >
-                            Reply
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleOpenComposer(leads.find(l => l.leadId === selectedMessage.leadId))}
+                              className="btn-gold px-3 py-1.5 rounded-lg text-xs font-bold"
+                            >
+                              Reply
+                            </button>
+                            <button
+                              onClick={() => handleMoveToTrash(selectedMessage.emailId)}
+                              className="p-1.5 rounded-lg bg-[#1f2336] text-rose-400 hover:bg-rose-500/20"
+                              title="Move to Trash"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
-                        <button
-                          onClick={() => handleMoveToTrash(selectedMessage.emailId)}
-                          className="p-1.5 rounded-lg bg-[#1f2336] text-rose-400 hover:bg-rose-500/20"
-                          title="Move to Trash"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </div>
 
@@ -693,6 +915,38 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Permanent Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#141622] border border-rose-500/40 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center space-x-3 text-rose-400">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+              <h3 className="text-lg font-bold font-display text-white">Permanently Delete Email?</h3>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              This message will be <strong>permanently deleted</strong> from the connected Zoho IMAP server (`imappro.zoho.com:993`) and local database store.
+              <br/><br/>
+              It cannot be restored or resurrected after refresh, backend restart, or mailbox re-synchronization.
+            </p>
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#22273d] text-slate-300 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeletePermanently}
+                disabled={isDeleting}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/30 disabled:opacity-50"
+              >
+                {isDeleting ? 'DELETING FROM ZOHO IMAP...' : 'DELETE PERMANENTLY'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Compose Email Modal */}
       {showComposer && (
@@ -784,13 +1038,12 @@ export const EmailInboxView: React.FC<EmailInboxViewProps> = ({
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Message Body</label>
-                <textarea
-                  rows={7}
-                  value={composerBody}
-                  onChange={(e) => setComposerBody(e.target.value)}
-                  className="w-full bg-[#181b2a] border border-[#2a2f47] text-white rounded-xl p-3 outline-none font-sans"
-                  required
+                <label className="text-slate-400 font-semibold block mb-1">Message Body (Rich Text & Hyperlinks Supported)</label>
+                <RichTextEmailComposer
+                  initialText={composerBody}
+                  onChange={(html, text) => {
+                    setComposerBody(html || text);
+                  }}
                 />
               </div>
 

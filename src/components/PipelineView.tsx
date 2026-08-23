@@ -101,7 +101,8 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
                   statusLeads.map((lead) => (
                     <div
                       key={lead.leadId}
-                      className="bg-[#181b28] hover:bg-[#1f2336] p-4 rounded-xl border border-[#262b42] hover:border-[#f5b82e]/40 transition-all space-y-3 group shadow-md"
+                      onClick={() => onSelectLead(lead)}
+                      className="bg-[#181b28] hover:bg-[#1f2336] p-4 rounded-xl border border-[#262b42] hover:border-[#f5b82e]/40 transition-all space-y-3 group shadow-md cursor-pointer"
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -126,7 +127,7 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
                       )}
 
                       {/* Card Action Controls */}
-                      <div className="flex items-center justify-between pt-2 border-t border-[#22263a] text-xs">
+                      <div className="flex items-center justify-between pt-2 border-t border-[#22263a] text-xs" onClick={(e) => e.stopPropagation()}>
                         {/* Status Select */}
                         <select
                           value={lead.outreachStatus}

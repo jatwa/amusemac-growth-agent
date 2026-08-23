@@ -93,23 +93,34 @@ export const LeadHunterView: React.FC<LeadHunterViewProps> = ({
       return;
     }
 
-    setDiscoveredCandidates(searchRes.leads);
-    setSelectedCandidates(searchRes.leads.map(l => l.leadId));
+    const mappedLeads: any[] = (searchRes.leads || []).map(l => ({
+      ...l,
+      leadId: l.leadId || l.id,
+      projectName: l.projectName || l.title || 'Project Requirement',
+      serviceNeed: l.serviceNeed || (l.matchedServices ? l.matchedServices[0] : 'Creative Production'),
+      primaryService: l.primaryService || (l.matchedServices ? l.matchedServices[0] : 'Creative Production'),
+      whyThisLead: l.whyThisIsAMatch || l.whyThisLead || 'Matching buyer requirement',
+      aiScore: l.aiScore || l.intentScore || 85,
+      priority: l.scoreTier || (l.intentType === 'HOT' ? 'HOT' : 'WARM')
+    }));
+
+    setDiscoveredCandidates(mappedLeads);
+    setSelectedCandidates(mappedLeads.map(l => l.leadId));
 
     const defaultReport: SearchReport = searchRes.report || {
       searchQuery: projectKeyword || selectedService || 'Target Buyers Scan',
       targetLocation: targetLocation,
       clientId: activeProfile.clientId,
-      totalDiscovered: searchRes.total || searchRes.leads.length,
+      totalDiscovered: searchRes.total || mappedLeads.length,
       duplicatesRemoved: 0,
       competitorsRemoved: 0,
       icpRejected: 0,
-      qualifiedCount: searchRes.leads.length,
-      shortlistedCount: searchRes.leads.length,
-      topOpportunities: searchRes.leads.slice(0, 3).map(l => `${l.companyName}: Strategic Opportunity`),
-      topIndustries: { 'Commercial Services': searchRes.leads.length },
-      topLocations: { [targetLocation || 'Global']: searchRes.leads.length },
-      topBuyingSignals: { 'Live Web Search': searchRes.leads.length },
+      qualifiedCount: mappedLeads.length,
+      shortlistedCount: mappedLeads.length,
+      topOpportunities: mappedLeads.slice(0, 3).map(l => `${l.companyName}: Strategic Opportunity`),
+      topIndustries: { 'Commercial Services': mappedLeads.length },
+      topLocations: { [targetLocation || 'Global']: mappedLeads.length },
+      topBuyingSignals: { 'Live Web Search': mappedLeads.length },
       executionTimeMs: 450
     };
 
@@ -120,19 +131,19 @@ export const LeadHunterView: React.FC<LeadHunterViewProps> = ({
       icp: activeProfile.companyName,
       service: selectedService,
       date: new Date().toISOString().slice(0, 10),
-      rawResultsCount: searchRes.totalFound || searchRes.leads.length,
-      qualifiedCount: searchRes.leads.length,
-      shortlistedCount: searchRes.leads.length,
-      hotCount: searchRes.leads.filter(l => l.priority === 'HOT').length,
+      rawResultsCount: searchRes.totalFound || mappedLeads.length,
+      qualifiedCount: mappedLeads.length,
+      shortlistedCount: mappedLeads.length,
+      hotCount: mappedLeads.filter(l => l.priority === 'HOT').length,
       report: defaultReport,
-      leads: searchRes.leads
+      leads: mappedLeads
     });
 
     setSearchProgress(100);
     setIsSearching(false);
-    setDiscoveredCandidates(searchRes.leads);
+    setDiscoveredCandidates(mappedLeads);
     setSearchReport(defaultReport);
-    setSelectedCandidates(searchRes.leads.map(r => r.leadId));
+    setSelectedCandidates(mappedLeads.map(r => r.leadId));
   };
 
   const handleToggleSelectCandidate = (leadId: string) => {

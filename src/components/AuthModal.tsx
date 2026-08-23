@@ -3,7 +3,7 @@ import { Mail, Lock, Building2, Sparkles, ArrowRight, ShieldCheck, CheckCircle2,
 import { loginUser, signupUser, loginWithOAuthProvider, verifyGoogleAuthWithBackend, getGoogleClientId, AuthSession, validatePasswordPolicy } from '../services/authService';
 import { AuthProviderType, EmailProviderType } from '../types/saas';
 import { GoogleLogo, ZohoLogo, AmusemacLogo } from './ProviderLogos';
-import { IS_DEV, BUILD_SHA } from '../config/env';
+import { IS_DEV, BUILD_SHA, ENABLE_OAUTH_BUTTONS } from '../config/env';
 
 declare global {
   interface Window {
@@ -154,8 +154,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#121420] border border-[#272b42] rounded-3xl w-full max-w-md p-6 sm:p-8 space-y-5 shadow-2xl text-slate-200">
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-[#121420] border border-[#272b42] rounded-2xl sm:rounded-3xl w-full max-w-md p-5 sm:p-8 space-y-5 shadow-2xl text-slate-200 max-h-[95vh] overflow-y-auto">
         {/* Official Brand Header */}
         <div className="text-center space-y-2">
           <div className="flex justify-center">
@@ -232,37 +232,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthenticated })
           </div>
         ) : (
           <>
-            {/* Primary OAuth Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => handleOAuthSignIn('GOOGLE')}
-                disabled={isLoading}
-                className="flex items-center justify-center space-x-2.5 p-3 rounded-xl bg-[#161928] hover:bg-[#1f2438] border border-[#2a2f47] transition-all text-xs font-semibold text-white shadow-sm disabled:opacity-50"
-              >
-                <GoogleLogo className="w-4 h-4" />
-                <span>Google</span>
-              </button>
+            {/* Primary OAuth Buttons (Only when ENABLE_OAUTH_BUTTONS is explicitly enabled) */}
+            {ENABLE_OAUTH_BUTTONS && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOAuthSignIn('GOOGLE')}
+                    disabled={isLoading}
+                    className="flex items-center justify-center space-x-2.5 p-3 rounded-xl bg-[#161928] hover:bg-[#1f2438] border border-[#2a2f47] transition-all text-xs font-semibold text-white shadow-sm disabled:opacity-50"
+                  >
+                    <GoogleLogo className="w-4 h-4" />
+                    <span>Google</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => handleOAuthSignIn('ZOHO')}
-                disabled={isLoading}
-                className="flex items-center justify-center space-x-2.5 p-3 rounded-xl bg-[#161928] hover:bg-[#1f2438] border border-[#2a2f47] transition-all text-xs font-semibold text-white shadow-sm disabled:opacity-50"
-              >
-                <ZohoLogo className="w-5 h-3.5" />
-                <span>Zoho</span>
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOAuthSignIn('ZOHO')}
+                    disabled={isLoading}
+                    className="flex items-center justify-center space-x-2.5 p-3 rounded-xl bg-[#161928] hover:bg-[#1f2438] border border-[#2a2f47] transition-all text-xs font-semibold text-white shadow-sm disabled:opacity-50"
+                  >
+                    <ZohoLogo className="w-5 h-3.5" />
+                    <span>Zoho</span>
+                  </button>
+                </div>
 
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#23273d]"></div>
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
-                <span className="bg-[#121420] px-3 text-slate-500">Or continue with email</span>
-              </div>
-            </div>
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#23273d]"></div>
+                  </div>
+                  <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
+                    <span className="bg-[#121420] px-3 text-slate-500">Or continue with email</span>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Email + Password Form */}
             <form onSubmit={handleSubmit} className="space-y-3 text-xs">

@@ -38,10 +38,28 @@ import { OnboardingWizardModal } from './components/OnboardingWizardModal';
 import { PlanLimitModal } from './components/PlanLimitModal';
 import { AuthModal } from './components/AuthModal';
 import { initThemeListener } from './services/themeService';
+import { AdminLoginView } from './components/AdminLoginView';
+import { TeamLoginView } from './components/TeamLoginView';
+import { TeamMemberShell } from './components/TeamMemberShell';
+import { BackendControlView } from './components/BackendControlView';
 
 export function App() {
+  const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname);
   const [activeTab, setActiveTab] = useState<string>('search');
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path: string) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+  };
 
   // Initialize System Theme Listener
   useEffect(() => {
@@ -71,6 +89,42 @@ export function App() {
   // Real Authentication Session State
   const [authSession, setAuthSession] = useState<AuthSession | null>(getCurrentSession);
 
+  // Presence Heartbeat Loop (Sends heartbeat every 30 seconds when authenticated)
+  useEffect(() => {
+    if (!authSession || !authSession.token) return;
+
+    const sendHeartbeat = async () => {
+      try {
+        const token = authSession.token;
+        await fetch('/api/auth/presence/heartbeat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ sessionId: token })
+        });
+      } catch (e) {
+        // Silent error handling for background presence ping
+      }
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 30000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        sendHeartbeat();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [authSession?.token]);
+
   // SaaS Organizations & User Role State
   const [organizations, setOrganizations] = useState<Organization[]>(loadOrganizationsList);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(() => {
@@ -85,10 +139,10 @@ export function App() {
     return activeOrg ? getOrgClientProfile(activeOrg.orgId) : DEFAULT_CUSTOMER_PROFILE;
   });
 
-  // CRM Leads State (Isolated by Organization)
+  // CRM Leads State (Isolated by Organization - REAL_PUBLIC ONLY)
   const [leads, setLeads] = useState<Lead[]>(() => {
     if (!activeOrg) return [];
-    return getOrgLeads(activeOrg.orgId, activeOrg.orgId === 'amusemac-studio' ? INITIAL_LEADS : []);
+    return getOrgLeads(activeOrg.orgId, []);
   });
 
   // Usage Metering State
@@ -247,14 +301,51 @@ export function App() {
   const todayStr = new Date().toISOString().slice(0, 10);
   const dueFollowUpsCount = leads.filter(l => l.followUpDate && l.followUpDate <= todayStr && l.outreachStatus !== 'WON' && l.outreachStatus !== 'LOST').length;
 
+  // 1. Separate Login / Control URL Route Dispatching
+  if (currentPath === '/admin/login') {
+    return (
+      <AdminLoginView
+        onLoginSuccess={(session) => {
+          handleAuthenticated(session);
+          navigateTo('/admin');
+        }}
+        onNavigateToTeamLogin={() => navigateTo('/team/login')}
+      />
+    );
+  }
+
+  if (currentPath === '/team/login') {
+    return (
+      <TeamLoginView
+        onLoginSuccess={(session) => {
+          handleAuthenticated(session);
+          navigateTo('/team');
+        }}
+        onNavigateToAdminLogin={() => navigateTo('/admin/login')}
+      />
+    );
+  }
+
+  if (currentPath === '/backend/control') {
+    return (
+      <BackendControlView
+        authSession={authSession}
+        onNavigateToWorkspace={() => {
+          if (authSession?.user.role === 'TEAM_MEMBER') navigateTo('/team');
+          else navigateTo('/admin');
+        }}
+      />
+    );
+  }
+
   // Unauthenticated Public Marketing View vs Auth Modal
   if (!authSession || !activeOrg || !currentUserRole) {
     return (
       <>
         <PublicMarketingView
-          onLoginClick={() => setShowAuthModal(true)}
-          onSignUpClick={() => setShowAuthModal(true)}
-          onStartFreeSearch={() => setShowAuthModal(true)}
+          onLoginClick={() => navigateTo('/admin/login')}
+          onSignUpClick={() => navigateTo('/team/login')}
+          onStartFreeSearch={() => navigateTo('/team/login')}
         />
         <AuthModal
           isOpen={showAuthModal}
@@ -264,6 +355,24 @@ export function App() {
           }}
         />
       </>
+    );
+  }
+
+  // 2. Strict Team Member Isolated Shell (NO Admin UI, NO Pricing, NO Billing)
+  if (authSession.user.role === 'TEAM_MEMBER' || currentPath === '/team') {
+    return (
+      <TeamMemberShell
+        authSession={authSession}
+        onLogout={() => {
+          handleLogout();
+          navigateTo('/team/login');
+        }}
+        leads={leads}
+        onAddLeads={handleAddLeads}
+        onUpdateLeadStatus={handleUpdateLeadStatus}
+        onUpdateLeadDetails={handleUpdateLeadDetails}
+        onTrackUsage={handleTrackUsage}
+      />
     );
   }
 
@@ -286,10 +395,12 @@ export function App() {
         userName={authSession.user.name}
         userEmail={authSession.user.email}
         onLogout={handleLogout}
+        activeTab={activeTab}
+        dueFollowUpsCount={dueFollowUpsCount}
       />
 
       {/* Main Body Layout */}
-      <div className="flex-1 flex max-w-[1700px] w-full mx-auto px-4 sm:px-6 py-6 gap-6">
+      <div className="flex-1 flex max-w-[1700px] w-full mx-auto px-2 sm:px-6 py-4 sm:py-6 gap-4 sm:gap-6 min-w-0">
         {/* Navigation Sidebar */}
         <Sidebar
           activeTab={activeTab}
@@ -300,7 +411,7 @@ export function App() {
         />
 
         {/* View Component Renderer */}
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 overflow-hidden">
           {(activeTab === 'search' || activeTab === 'hunter') && (
             <SearchHomeView
               existingLeads={leads}

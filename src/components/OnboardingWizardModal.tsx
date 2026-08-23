@@ -80,8 +80,8 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#121422] border border-[#272c44] rounded-3xl w-full max-w-2xl p-6 space-y-6 shadow-2xl overflow-hidden text-slate-200">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-[#121422] border border-[#272c44] rounded-2xl sm:rounded-3xl w-full max-w-2xl p-4 sm:p-6 space-y-6 shadow-2xl overflow-y-auto max-h-[92vh] text-slate-200">
         {/* Step Header Bar */}
         <div className="flex items-center justify-between border-b border-[#23273d] pb-4">
           <div className="flex items-center space-x-2">

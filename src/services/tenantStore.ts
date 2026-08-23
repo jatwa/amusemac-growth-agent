@@ -21,25 +21,94 @@ export const DEFAULT_CUSTOMER_PROFILE: ClientProfile = {
   minIcpScore: 50
 };
 
+export interface LeadCompletenessResult {
+  availableCount: number;
+  totalCount: number;
+  percentage: number;
+  availableFields: string[];
+  missingFields: string[];
+}
+
+export function calculateLeadCompleteness(lead: any): LeadCompletenessResult {
+  if (!lead) {
+    return { availableCount: 0, totalCount: 12, percentage: 0, availableFields: [], missingFields: [] };
+  }
+
+  const fieldsCheck = [
+    { name: 'Company Name', val: lead.companyName || lead.requester },
+    { name: 'Requirement', val: lead.requirement || lead.description || lead.serviceNeed },
+    { name: 'Service Needed', val: (Array.isArray(lead.matchedServices) && lead.matchedServices.length > 0) ? lead.matchedServices.join(', ') : lead.primaryService },
+    { name: 'Location', val: lead.location },
+    { name: 'Source', val: lead.source },
+    { name: 'Source URL', val: lead.sourceUrl || (Array.isArray(lead.sourceUrls) ? lead.sourceUrls[0] : '') },
+    { name: 'Contact Name', val: lead.contactInfo?.name || (lead.decisionMakerName && lead.decisionMakerName !== 'Not found' ? lead.decisionMakerName : '') },
+    { name: 'Email', val: lead.contactInfo?.email || (lead.email && lead.email !== 'Not found' ? lead.email : '') },
+    { name: 'Phone', val: lead.contactInfo?.phone || (lead.phone && lead.phone !== 'Not found' ? lead.phone : '') },
+    { name: 'Website', val: lead.website && lead.website !== 'Not found' ? lead.website : '' },
+    { name: 'Budget', val: lead.budget && lead.budget !== 'Budget on Discussion' ? lead.budget : '' },
+    { name: 'Deadline', val: lead.deadline }
+  ];
+
+  const availableFields: string[] = [];
+  const missingFields: string[] = [];
+
+  for (const f of fieldsCheck) {
+    if (f.val && String(f.val).trim() !== '' && String(f.val) !== 'Not found') {
+      availableFields.push(f.name);
+    } else {
+      missingFields.push(f.name);
+    }
+  }
+
+  const availableCount = availableFields.length;
+  const totalCount = fieldsCheck.length;
+  const percentage = Math.round((availableCount / totalCount) * 100);
+
+  return {
+    availableCount,
+    totalCount,
+    percentage,
+    availableFields,
+    missingFields
+  };
+}
+
 /**
- * Retrieves leads exclusively belonging to specified organization_id
+ * Filter function ensuring demo leads never populate normal CRM lists
+ */
+export function filterRealPublicLeadsOnly<T extends { dataStatus?: string; leadId?: string }>(leads: T[]): T[] {
+  if (!Array.isArray(leads)) return [];
+  return leads.filter(l => l && l.dataStatus !== 'DEMO_LOCAL' && !(l.leadId && l.leadId.startsWith('DEMO-')));
+}
+
+/**
+ * Retrieves leads exclusively belonging to specified organization_id (Real Public leads ONLY)
  */
 export function getOrgLeads(orgId: string, defaultLeads: Lead[] = []): Lead[] {
   try {
     const saved = localStorage.getItem(`${TENANT_LEADS_PREFIX}${orgId}`);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed: Lead[] = JSON.parse(saved);
+      const cleaned = filterRealPublicLeadsOnly(parsed);
+      // Automatically purge demo leads from local storage
+      if (cleaned.length !== parsed.length) {
+        localStorage.setItem(`${TENANT_LEADS_PREFIX}${orgId}`, JSON.stringify(cleaned));
+      }
+      return cleaned;
+    }
   } catch (e) {
     console.error(`Failed to parse leads for org ${orgId}:`, e);
   }
-  return defaultLeads;
+  return filterRealPublicLeadsOnly(defaultLeads);
 }
 
 /**
- * Saves leads isolated by organization_id
+ * Saves leads isolated by organization_id (ensures DEMO_LOCAL leads are never persisted as normal leads)
  */
 export function saveOrgLeads(orgId: string, leads: Lead[]): void {
   try {
-    localStorage.setItem(`${TENANT_LEADS_PREFIX}${orgId}`, JSON.stringify(leads));
+    const realPublicLeads = filterRealPublicLeadsOnly(leads);
+    localStorage.setItem(`${TENANT_LEADS_PREFIX}${orgId}`, JSON.stringify(realPublicLeads));
   } catch (e) {
     console.error(`Failed to save leads for org ${orgId}:`, e);
   }

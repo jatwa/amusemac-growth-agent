@@ -1,0 +1,22 @@
+{
+  "reconciliationTimestamp": "2026-08-17T10:06:04.254Z",
+  "totalUsersFound": 3,
+  "adminUsers": 1,
+  "teamMembers": 1,
+  "historicalSessions": 32,
+  "sessionsWithSnapshotsBefore": 18,
+  "snapshotsRepaired": 0,
+  "snapshotsUnrecoverable": 14,
+  "govindSessionsFound": 4,
+  "govindSessionsRepaired": 0,
+  "usersMappedToWorkspace": 3,
+  "duplicateSessionsPrevented": 0,
+  "leadsPreserved": 151,
+  "serpApiRequestsConsumed": 0,
+  "presence": {
+    "usersWithPresenceRecords": 3,
+    "currentlyOnline": 0,
+    "currentlyOffline": 3,
+    "activeSessions": 0
+  }
+}

@@ -51,8 +51,8 @@ export const LeadIntelligenceModal: React.FC<LeadIntelligenceModalProps> = ({
   const outreachPkg = generateOutreachPackage(lead, activeOrg);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-[#121420] border border-[#262c44] rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-slate-200">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-0 sm:p-6 overflow-y-auto">
+      <div className="bg-[#121420] border-0 sm:border border-[#262c44] rounded-none sm:rounded-3xl w-full max-w-4xl min-h-screen sm:min-h-0 sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-slate-200">
         {/* Top Drawer Header */}
         <div className="p-6 bg-gradient-to-r from-[#171929] via-[#1a1d30] to-[#171929] border-b border-[#23273c] flex items-start justify-between">
           <div className="space-y-1">
