@@ -108,6 +108,7 @@ export function saveSession(user: User, organization: Organization): AuthSession
     orgId: user.orgId,
     role: user.role,
     email: user.email,
+    plan: organization.planId || 'FREE',
     exp: Date.now() + 86400000
   };
   const jsonStr = JSON.stringify(tokenPayload);

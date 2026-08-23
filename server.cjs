@@ -301,6 +301,7 @@ app.post('/api/auth/google', async (req, res) => {
     orgId,
     role,
     email: cleanEmail,
+    plan: planId || 'FREE',
     exp
   };
 
@@ -525,6 +526,7 @@ app.post('/api/auth/zoho/callback', async (req, res) => {
     orgId,
     role,
     email: cleanEmail,
+    plan: planId || 'FREE',
     exp
   };
 
@@ -976,19 +978,6 @@ const {
   analyzeOpportunityContent
 } = require('./server/intentEngine.cjs');
 
-// GET /api/search - Execute query-specific lead search status check
-app.get('/api/search', authenticateServerRequest, (req, res) => {
-  const query = req.query.q || '';
-  const location = req.query.location || '';
-  res.json({
-    success: true,
-    query,
-    location,
-    results: [],
-    message: 'Lead discovery search status endpoint'
-  });
-});
-
 // GET /api/serpapi/quota - Fetch Combined SerpAPI Quota Remaining
 app.get('/api/serpapi/quota', authenticateServerRequest, async (req, res) => {
   try {
@@ -1034,7 +1023,7 @@ app.post('/api/search', authenticateServerRequest, async (req, res) => {
   const startedAt = new Date().toISOString();
 
   // Determine User Plan Query Limit (Part 6)
-  const userPlan = req.auth.plan || (req.auth.email && (req.auth.email.includes('admin') || req.auth.email.includes('amusemac')) ? 'MAX' : 'PRO');
+  const userPlan = req.auth.plan || 'FREE';
 
   // Step 1: AI Search Intent Extraction (Part 2)
   const intent = extractSearchIntent(query || filters.service || 'creative production', manualLocation || countries.join(', '));
