@@ -19,7 +19,7 @@ class PublicWebSearchProvider {
   }
 
   getPrimaryApiKey() {
-    return process.env.SERPAPI_PRIMARY_API_KEY || process.env.WEB_SEARCH_API_KEY || process.env.SERPAPI_API_KEY || 'f7b5e0e40e4e5726f6505c9e5675557975fbf3cd3af8e5b0885a8aab800be78d';
+    return process.env.SERPAPI_PRIMARY_API_KEY || process.env.WEB_SEARCH_API_KEY || process.env.SERPAPI_API_KEY || '';
   }
 
   getBackupApiKey() {
