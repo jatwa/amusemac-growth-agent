@@ -27,3 +27,10 @@ services:
         value: "993"
       - key: ZOHO_IMAP_SECURE
         value: "true"
+      - key: SERPAPI_API_KEY
+        value: f7b5e0e40e4e5726f6505c9e5675557975fbf3cd3af8e5b0885a8aab800be78d
+      - key: WEB_SEARCH_API_KEY
+        value: f7b5e0e40e4e5726f6505c9e5675557975fbf3cd3af8e5b0885a8aab800be78d
+      - key: SERPAPI_PRIMARY_API_KEY
+        value: f7b5e0e40e4e5726f6505c9e5675557975fbf3cd3af8e5b0885a8aab800be78d
+
