@@ -1,61 +1,32 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, ArrowRight, Zap } from 'lucide-react';
-import { AuthSession } from '../services/authService';
+import { ShieldCheck, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { AuthSession, loginAdminServer } from '../services/authService';
 
 interface AdminLoginViewProps {
   onLoginSuccess: (session: AuthSession) => void;
-  onNavigateToTeamLogin: () => void;
 }
 
 export const AdminLoginView: React.FC<AdminLoginViewProps> = ({
-  onLoginSuccess,
-  onNavigateToTeamLogin
+  onLoginSuccess
 }) => {
   const [email, setEmail] = useState('admin@amusemacstudio.in');
-  const [password, setPassword] = useState('••••••••••••');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleAdminSubmit = (e: React.FormEvent) => {
+  const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage('');
 
-    setTimeout(() => {
-      const exp = Date.now() + 86400000;
-      const adminSession: AuthSession = {
-        user: {
-          userId: 'usr-admin-primary',
-          orgId: 'amusemac-studio',
-          name: 'Amusemac Workspace Admin',
-          fullName: 'Amusemac Workspace Admin',
-          email,
-          whatsappNumber: '',
-          emailVerified: true,
-          whatsappVerified: false,
-          role: 'ADMIN',
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString()
-        },
-        organization: {
-          orgId: 'amusemac-studio',
-          companyName: 'Amusemac Studio Workspace',
-          tagline: 'Growth Engine',
-          website: 'https://amusemacstudio.in',
-          status: 'ACTIVE',
-          planId: 'PRO',
-          adminEmail: email,
-          adminName: 'Amusemac Workspace Admin',
-          emailConfig: { provider: 'ZOHO', email: 'hello@amusemacstudio.in', status: 'CONNECTED' },
-          sheetsWebhookUrl: '',
-          createdAt: new Date().toISOString(),
-          renewalDate: new Date(Date.now() + 30 * 86400000).toISOString()
-        },
-        token: `amu_sess_${btoa(JSON.stringify({ userId: 'usr-admin-primary', orgId: 'amusemac-studio', role: 'ADMIN', email, exp }))}`,
-        expiresAt: new Date(exp).toISOString()
-      };
-
+    try {
+      const session = await loginAdminServer(email, password);
       setIsLoading(false);
-      onLoginSuccess(adminSession);
-    }, 600);
+      onLoginSuccess(session);
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMessage(err?.message || 'Invalid admin credentials. Please try again.');
+    }
   };
 
   return (
@@ -67,24 +38,31 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({
         <div className="text-center space-y-2">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#1e2338] border border-[#2d3659] text-xs font-semibold text-[#f5b82e]">
             <ShieldCheck className="w-4 h-4" />
-            <span>WORKSPACE ADMIN LOGIN</span>
+            <span>ADMIN LOGIN</span>
           </div>
-          <h1 className="text-2xl font-bold font-display text-white">Amusemac Workspace Portal</h1>
+          <h1 className="text-2xl font-bold font-display text-white">AMUSEMAC GROWTH AGENT</h1>
           <p className="text-xs text-slate-400">
-            Sign in as Company Admin to manage growth operations, subscription & team workspace.
+            Sign in as Company Admin to manage growth operations & buyer demand discovery.
           </p>
         </div>
 
         <form onSubmit={handleAdminSubmit} className="glass-card p-6 sm:p-8 rounded-3xl border border-[#262b48] space-y-4 shadow-2xl">
+          {errorMessage && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <div>
-            <label className="text-slate-300 block text-xs font-semibold mb-1">Admin Email Address</label>
+            <label className="text-slate-300 block text-xs font-semibold mb-1">Work Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full bg-[#121422] border border-[#2a2f4c] text-white text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#f5b82e]"
-              placeholder="admin@company.com"
+              placeholder="admin@amusemacstudio.in"
             />
           </div>
 
@@ -96,6 +74,7 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({
               onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full bg-[#121422] border border-[#2a2f4c] text-white text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#f5b82e]"
+              placeholder="Enter admin password"
             />
           </div>
 
@@ -105,20 +84,10 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({
             className="w-full btn-gold py-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-[#f5b82e]/20"
           >
             <Lock className="w-4 h-4" />
-            <span>{isLoading ? 'Authenticating Admin...' : 'Sign In to Admin Workspace'}</span>
+            <span>{isLoading ? 'Authenticating Admin...' : 'SIGN IN'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-        <div className="text-center pt-2">
-          <button
-            type="button"
-            onClick={onNavigateToTeamLogin}
-            className="text-xs text-slate-400 hover:text-white underline font-medium transition-colors"
-          >
-            Are you a Team Member? Switch to Team Member Login →
-          </button>
-        </div>
       </div>
     </div>
   );

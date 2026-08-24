@@ -14,10 +14,8 @@ import {
   saveOrganizationsList
 } from './services/tenantStore';
 import { getOrgUsage, trackOrgUsage, checkPlanAllowance } from './services/usageMetering';
-import { getCurrentSession, logoutUser, AuthSession, verifyZohoAuthWithBackend } from './services/authService';
-import { canAccessAdminPanel } from './services/entitlementService';
+import { getCurrentSession, logoutUser, AuthSession } from './services/authService';
 
-import { PublicMarketingView } from './components/PublicMarketingView';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { SearchHomeView } from './components/SearchHomeView';
@@ -34,14 +32,8 @@ import { FeedbackView } from './components/FeedbackView';
 import { SettingsView } from './components/SettingsView';
 import { SuperAdminView } from './components/SuperAdminView';
 import { LeadIntelligenceModal } from './components/LeadIntelligenceModal';
-import { OnboardingWizardModal } from './components/OnboardingWizardModal';
-import { PlanLimitModal } from './components/PlanLimitModal';
-import { AuthModal } from './components/AuthModal';
 import { initThemeListener } from './services/themeService';
 import { AdminLoginView } from './components/AdminLoginView';
-import { TeamLoginView } from './components/TeamLoginView';
-import { TeamMemberShell } from './components/TeamMemberShell';
-import { BackendControlView } from './components/BackendControlView';
 
 export function App() {
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname);
@@ -67,24 +59,6 @@ export function App() {
     return cleanup;
   }, []);
 
-  // Handle OAuth Redirect Callback (e.g. /auth/zoho/callback?code=...)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const state = params.get('state');
-
-    if (code && (window.location.pathname.includes('/auth/zoho/callback') || window.location.pathname.includes('/auth/callback') || window.location.search.includes('code='))) {
-      (async () => {
-        try {
-          const session = await verifyZohoAuthWithBackend(code, state || undefined);
-          handleAuthenticated(session);
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (err: any) {
-          console.error('[Zoho Callback Error]', err);
-        }
-      })();
-    }
-  }, []);
 
   // Real Authentication Session State
   const [authSession, setAuthSession] = useState<AuthSession | null>(getCurrentSession);
@@ -301,77 +275,13 @@ export function App() {
   const todayStr = new Date().toISOString().slice(0, 10);
   const dueFollowUpsCount = leads.filter(l => l.followUpDate && l.followUpDate <= todayStr && l.outreachStatus !== 'WON' && l.outreachStatus !== 'LOST').length;
 
-  // 1. Separate Login / Control URL Route Dispatching
-  if (currentPath === '/admin/login') {
+  // Unauthenticated Admin Login View
+  if (!authSession || !activeOrg || !currentUserRole) {
     return (
       <AdminLoginView
         onLoginSuccess={(session) => {
           handleAuthenticated(session);
-          navigateTo('/admin');
         }}
-        onNavigateToTeamLogin={() => navigateTo('/team/login')}
-      />
-    );
-  }
-
-  if (currentPath === '/team/login') {
-    return (
-      <TeamLoginView
-        onLoginSuccess={(session) => {
-          handleAuthenticated(session);
-          navigateTo('/team');
-        }}
-        onNavigateToAdminLogin={() => navigateTo('/admin/login')}
-      />
-    );
-  }
-
-  if (currentPath === '/backend/control') {
-    return (
-      <BackendControlView
-        authSession={authSession}
-        onNavigateToWorkspace={() => {
-          if (authSession?.user.role === 'TEAM_MEMBER') navigateTo('/team');
-          else navigateTo('/admin');
-        }}
-      />
-    );
-  }
-
-  // Unauthenticated Public Marketing View vs Auth Modal
-  if (!authSession || !activeOrg || !currentUserRole) {
-    return (
-      <>
-        <PublicMarketingView
-          onLoginClick={() => navigateTo('/admin/login')}
-          onSignUpClick={() => navigateTo('/team/login')}
-          onStartFreeSearch={() => navigateTo('/team/login')}
-        />
-        <AuthModal
-          isOpen={showAuthModal}
-          onAuthenticated={(sess) => {
-            setShowAuthModal(false);
-            handleAuthenticated(sess);
-          }}
-        />
-      </>
-    );
-  }
-
-  // 2. Strict Team Member Isolated Shell (NO Admin UI, NO Pricing, NO Billing)
-  if (authSession.user.role === 'TEAM_MEMBER' || currentPath === '/team') {
-    return (
-      <TeamMemberShell
-        authSession={authSession}
-        onLogout={() => {
-          handleLogout();
-          navigateTo('/team/login');
-        }}
-        leads={leads}
-        onAddLeads={handleAddLeads}
-        onUpdateLeadStatus={handleUpdateLeadStatus}
-        onUpdateLeadDetails={handleUpdateLeadDetails}
-        onTrackUsage={handleTrackUsage}
       />
     );
   }
@@ -391,7 +301,7 @@ export function App() {
         currentUserRole={currentUserRole}
         onSelectRole={setCurrentUserRole}
         orgUsage={orgUsage}
-        onOpenOnboarding={() => setShowOnboardingModal(true)}
+        onOpenOnboarding={() => {}}
         userName={authSession.user.name}
         userEmail={authSession.user.email}
         onLogout={handleLogout}
@@ -412,7 +322,7 @@ export function App() {
 
         {/* View Component Renderer */}
         <main className="flex-1 min-w-0 overflow-hidden">
-          {(activeTab === 'search' || activeTab === 'hunter') && (
+          {activeTab === 'search' && (
             <SearchHomeView
               existingLeads={leads}
               onAddLeads={handleAddLeads}
@@ -435,19 +345,7 @@ export function App() {
             />
           )}
 
-          {activeTab === 'hunter' && (
-            <LeadHunterView
-              existingLeads={leads}
-              onAddLeads={handleAddLeads}
-              onNavigate={setActiveTab}
-              webhookUrl={webhookUrl}
-              activeProfile={activeProfile}
-              onOpenIntelligenceReport={setIntelligenceReportLead}
-              onCheckAllowance={handleCheckAllowance}
-              onTrackUsage={handleTrackUsage}
-              onShowLimitModal={setLimitCheckResult}
-            />
-          )}
+
 
           {activeTab === 'history' && (
             <SearchHistoryView
@@ -526,36 +424,15 @@ export function App() {
           )}
 
           {activeTab === 'admin' && (
-            canAccessAdminPanel(authSession?.user || null, activeOrg) ? (
-              <SuperAdminView
-                organizations={organizations}
-                activeOrg={activeOrg}
-                onSelectOrg={handleSwitchOrg}
-                onUpdateOrg={handleUpdateOrg}
-                onAddOrganization={handleAddOrganization}
-                clientProfiles={[activeProfile]}
-                leads={leads}
-              />
-            ) : (
-              <div className="glass-card p-12 rounded-3xl border border-rose-500/30 text-center space-y-6 max-w-xl mx-auto my-12 animate-fadeIn">
-                <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-2xl flex items-center justify-center mx-auto">
-                  403
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold font-display text-white">Access Forbidden</h2>
-                  <p className="text-sm text-slate-400 leading-relaxed">
-                    The Platform Admin Panel is strictly restricted to platform <strong className="text-white">SUPER_ADMIN</strong> accounts.
-                    Customer subscription plans (<span className="text-[#f5b82e] font-bold">{activeOrg.planId}</span>) do not grant access to multi-tenant platform administration.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setActiveTab('search')}
-                  className="btn-gold px-6 py-3 rounded-xl font-bold text-xs"
-                >
-                  Return to Customer Search Workspace
-                </button>
-              </div>
-            )
+            <SuperAdminView
+              organizations={organizations}
+              activeOrg={activeOrg}
+              onSelectOrg={handleSwitchOrg}
+              onUpdateOrg={handleUpdateOrg}
+              onAddOrganization={handleAddOrganization}
+              clientProfiles={[activeProfile]}
+              leads={leads}
+            />
           )}
 
           {activeTab === 'settings' && (
@@ -587,26 +464,6 @@ export function App() {
           activeOrg={activeOrg}
         />
       )}
-
-      {/* 14-Step Customer Onboarding Wizard Modal */}
-      <OnboardingWizardModal
-        isOpen={showOnboardingModal}
-        onClose={() => setShowOnboardingModal(false)}
-        onComplete={(newProfile) => {
-          setActiveProfile(newProfile);
-          setActiveTab('hunter');
-        }}
-        existingProfile={activeProfile}
-      />
-
-      {/* Plan Limit Exceeded Modal */}
-      <PlanLimitModal
-        checkResult={limitCheckResult}
-        onClose={() => setLimitCheckResult(null)}
-        onUpgradePlan={() => {
-          setActiveTab('admin');
-        }}
-      />
     </div>
   );
 }

@@ -133,107 +133,36 @@ export function saveSession(user: User, organization: Organization): AuthSession
 }
 
 /**
+ * Authenticates Admin user server-side via POST /api/auth/login
+ */
+export async function loginAdminServer(email: string, password: string): Promise<AuthSession> {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success || !data.session) {
+    throw new Error(data.message || 'Invalid admin email or password.');
+  }
+
+  const session: AuthSession = data.session;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+    }
+  } catch (e) {}
+  return session;
+}
+
+/**
  * Authenticates user via Email & Password
  */
 export async function loginUser(email: string, password: string): Promise<AuthSession> {
-  await new Promise(r => setTimeout(r, 400));
-
-  const cleanEmail = email.trim().toLowerCase();
-  const users = loadUsersList();
-  const orgs = loadOrganizationsList();
-
-  // 1. Find matching existing user
-  const foundUser = users.find(u => u.email.toLowerCase() === cleanEmail);
-
-  if (foundUser) {
-    const targetOrg = orgs.find(o => o.orgId === foundUser.orgId) || INITIAL_ORGANIZATIONS[0];
-    return saveSession(foundUser, targetOrg);
-  }
-
-  // 2. Find matching existing org by admin email
-  const matchingOrg = orgs.find(o => o.adminEmail.toLowerCase() === cleanEmail);
-  if (matchingOrg) {
-    const matchedUser: User = {
-      userId: `usr-${matchingOrg.orgId}-admin`,
-      orgId: matchingOrg.orgId,
-      email: matchingOrg.adminEmail,
-      name: matchingOrg.adminName,
-      fullName: matchingOrg.adminName,
-      whatsappNumber: '',
-      emailVerified: true,
-      whatsappVerified: false,
-      role: 'ADMIN', // Org Admin
-      status: 'ACTIVE',
-      createdAt: matchingOrg.createdAt,
-      authIdentities: [
-        {
-          identityId: `id-email-${generateUuid()}`,
-          userId: `usr-${matchingOrg.orgId}-admin`,
-          provider: 'EMAIL',
-          providerAccountId: cleanEmail,
-          email: cleanEmail,
-          connectedAt: new Date().toISOString(),
-          isPrimary: true
-        }
-      ]
-    };
-    saveUsersList([...users, matchedUser]);
-    return saveSession(matchedUser, matchingOrg);
-  }
-
-  // 3. NEW CUSTOMER SIGNUP VIA EMAIL LOGIN: Generate isolated FREE workspace
-  const displayName = resolveDisplayName(undefined, undefined, undefined, cleanEmail);
-  const newOrgId = `org-cust-${generateUuid()}`;
-
-  const newOrg: Organization = {
-    orgId: newOrgId,
-    companyName: `${displayName}'s Workspace`,
-    tagline: 'SaaS Customer Workspace',
-    website: 'https://',
-    status: 'ACTIVE',
-    planId: 'FREE', // ALWAYS assign FREE plan to new signups
-    emailConfig: {
-      provider: 'CUSTOM_SMTP',
-      email: cleanEmail,
-      status: 'SIMULATED'
-    },
-    connectedMailboxes: [],
-    sheetsWebhookUrl: '',
-    createdAt: new Date().toISOString().slice(0, 10),
-    renewalDate: new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10),
-    adminEmail: cleanEmail,
-    adminName: displayName,
-    notes: 'Created via Email Auth'
-  };
-
-  const newUser: User = {
-    userId: `usr-${newOrgId}-admin`,
-    orgId: newOrgId,
-    email: cleanEmail,
-    name: displayName,
-    fullName: displayName,
-    whatsappNumber: '',
-    emailVerified: true,
-    whatsappVerified: false,
-    role: 'ADMIN', // Org Admin for their workspace ONLY
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString().slice(0, 10),
-    authIdentities: [
-      {
-        identityId: `id-email-${generateUuid()}`,
-        userId: `usr-${newOrgId}-admin`,
-        provider: 'EMAIL',
-        providerAccountId: cleanEmail,
-        email: cleanEmail,
-        connectedAt: new Date().toISOString(),
-        isPrimary: true
-      }
-    ]
-  };
-
-  saveOrganizationsList([...orgs, newOrg]);
-  saveUsersList([...users, newUser]);
-  return saveSession(newUser, newOrg);
+  return loginAdminServer(email, password);
 }
 
 /**

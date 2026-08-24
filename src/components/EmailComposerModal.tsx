@@ -47,7 +47,7 @@ export const EmailComposerModal: React.FC<EmailComposerModalProps> = ({
         setBody(initialBody);
       } else {
         const req = (lead as any).requirement || (lead as any).description || 'your creative production requirement';
-        const defaultBody = `Hi ${company} Team,\n\nI saw your requirement regarding "${req}".\n\nAt Amusemac Studio, we specialize in high-impact ${service}, motion graphics, and corporate film production. We can help execute this project efficiently within your target timeline.\n\nWould you be open to a quick 10-minute discovery call this week to discuss how we can support your project?\n\nBest regards,\nAmusemac Studio Team\nhttps://www.amusemacstudio.in`;
+        const defaultBody = `Hi ${company} Team,\n\nI saw your requirement regarding "${req}".\n\nAt Amusemac Studio, we specialize in high-impact ${service}, motion graphics, and corporate film production. We can help execute this project efficiently within your target timeline.\n\nWould you be open to a quick 10-minute discovery call this week to discuss how we can support your project?\n\nBest regards,\n\nKuldeep Jatwa\nCreative Director & Production Designer\nAmusemac Studio\n+91 8770382125\namusemacstudio.in`;
         setBody(defaultBody);
       }
     }

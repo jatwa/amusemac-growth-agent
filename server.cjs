@@ -143,165 +143,82 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// Helper: Verify Google ID Token server-side
-async function verifyGoogleIdTokenServer(idToken) {
-  if (!idToken || typeof idToken !== 'string') {
-    throw new Error('Google ID Token is required');
+// POST /api/auth/login - Single Admin-Only Authentication Endpoint
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body || {};
+
+  const targetAdminEmail = (process.env.ADMIN_EMAIL || 'admin@amusemacstudio.in').trim().toLowerCase();
+  const targetAdminPassword = (process.env.ADMIN_PASSWORD || 'AmusemacAdmin2026!Sec#Key').trim();
+
+  if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
+    return res.status(400).json({
+      success: false,
+      message: 'Admin email and password are required.'
+    });
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+  const cleanEmail = email.trim().toLowerCase();
 
-  // Test token format (amu_gtest_<b64>) for unit tests ONLY (disabled in production)
-  if (idToken.startsWith('amu_gtest_')) {
-    const isTestBypassAllowed = process.env.ENABLE_TEST_AUTH_BYPASS && process.env.ENABLE_TEST_AUTH_BYPASS.trim() === 'true' && process.env.NODE_ENV !== 'production';
-    if (!isTestBypassAllowed) {
-      throw new Error('Test OAuth tokens are not allowed in production');
-    }
-    const rawData = idToken.slice('amu_gtest_'.length).replace(/-/g, '+').replace(/_/g, '/');
-    const padLen = (4 - (rawData.length % 4)) % 4;
-    const padded = rawData + '='.repeat(padLen);
-    try {
-      const parsed = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
-      if (parsed.exp && parsed.exp < Date.now()) {
-        throw new Error('Google OAuth token expired');
-      }
-      if (parsed.aud && (parsed.aud.includes('attacker') || (clientId && parsed.aud !== clientId))) {
-        throw new Error('Google OAuth token audience mismatch: wrong client ID');
-      }
-      return parsed;
-    } catch (e) {
-      throw new Error(`Invalid Google ID Token: ${e.message}`);
-    }
-  }
-
-  if (!clientId) {
-    throw new Error('GOOGLE_CLIENT_ID environment variable is not configured on server');
-  }
-
-  const client = new OAuth2Client(clientId);
-  const ticket = await client.verifyIdToken({
-    idToken: idToken,
-    audience: clientId
-  });
-
-  const payload = ticket.getPayload();
-  if (!payload) {
-    throw new Error('Empty payload returned from Google ID Token verification');
-  }
-
-  if (!payload.email_verified) {
-    throw new Error('Google account email address is not verified');
-  }
-
-  return {
-    sub: payload.sub,
-    email: payload.email.toLowerCase(),
-    name: payload.name || `${payload.given_name || ''} ${payload.family_name || ''}`.trim(),
-    given_name: payload.given_name,
-    family_name: payload.family_name,
-    picture: payload.picture,
-    aud: payload.aud,
-    exp: payload.exp * 1000
-  };
-}
-
-// POST /api/auth/google - Authenticate Google OAuth ID Token server-side
-app.post('/api/auth/google', async (req, res) => {
-  const { idToken } = req.body || {};
-
-  if (!idToken) {
+  if (cleanEmail !== targetAdminEmail || password !== targetAdminPassword) {
+    recordAuditLog('FAILED_ADMIN_LOGIN', { email: cleanEmail });
     return res.status(401).json({
       success: false,
-      message: 'Unauthorized: Google ID Token is required.'
+      message: 'Invalid admin email or password.'
     });
   }
 
-  let googleUser;
-  try {
-    googleUser = await verifyGoogleIdTokenServer(idToken);
-  } catch (err) {
-    console.error('[Google Verification Error]', err.message);
-    const isTampered = err.message.includes('tampered') || err.message.includes('Forbidden');
-    const statusCode = isTampered ? 403 : 401;
-
-    return res.status(statusCode).json({
-      success: false,
-      message: `Unauthorized: ${err.message}`
-    });
-  }
-
-  const cleanEmail = googleUser.email.toLowerCase();
-  const isAdminUser = cleanEmail === (process.env.ADMIN_EMAIL || 'hello@amusemacstudio.in') || cleanEmail.includes('amusemacstudio.in');
-  const isGovindMember = cleanEmail === 'govindvkumar27@gmail.com' || cleanEmail.includes('govind');
-
-  const orgId = (isAdminUser || isGovindMember) ? 'amusemac-studio' : `org-cust-${cleanEmail.replace(/[^a-z0-9]/g, '-')}`;
-  const userId = isGovindMember ? 'usr-govind-001' : (isAdminUser ? 'usr-amusemac-admin' : `usr-${orgId}-admin`);
-  const role = isGovindMember ? 'TEAM_MEMBER' : (isAdminUser ? 'SUPER_ADMIN' : 'ADMIN');
-  const planId = (isAdminUser || isGovindMember) ? 'PRO' : 'FREE';
+  const userId = 'usr-amusemac-admin';
+  const orgId = 'amusemac-studio';
+  const role = 'SUPER_ADMIN';
+  const planId = 'SUPER_ADMIN';
 
   const user = {
     userId,
     orgId,
-    email: cleanEmail,
-    name: googleUser.name || 'Google Workspace User',
-    fullName: googleUser.name || 'Google Workspace User',
-    avatarUrl: googleUser.picture || '',
+    email: targetAdminEmail,
+    name: 'Amusemac Workspace Admin',
+    fullName: 'Amusemac Workspace Admin',
+    avatarUrl: '',
     whatsappNumber: '',
     emailVerified: true,
     whatsappVerified: false,
     role,
     status: 'ACTIVE',
-    createdAt: new Date().toISOString().slice(0, 10),
-    authIdentities: [
-      {
-        identityId: `id-google-${googleUser.sub}`,
-        userId,
-        provider: 'GOOGLE',
-        providerAccountId: googleUser.sub,
-        email: cleanEmail,
-        name: googleUser.name,
-        connectedAt: new Date().toISOString(),
-        isPrimary: true
-      }
-    ]
+    createdAt: new Date().toISOString().slice(0, 10)
   };
 
   const organization = {
     orgId,
-    companyName: isAdminUser ? 'Amusemac Studio' : `${googleUser.name || 'Customer'}'s Workspace`,
-    tagline: isAdminUser ? 'Enterprise Video & AI Production' : 'Customer Workspace',
-    website: isAdminUser ? 'https://www.amusemacstudio.in' : 'https://',
+    companyName: 'Amusemac Studio Workspace',
+    tagline: 'Growth Operations',
+    website: 'https://amusemacstudio.in',
     status: 'ACTIVE',
     planId,
-    emailConfig: {
-      provider: isAdminUser ? 'ZOHO' : 'CUSTOM_SMTP',
-      email: isAdminUser ? 'hello@amusemacstudio.in' : cleanEmail,
-      status: isAdminUser ? 'CONNECTED' : 'SIMULATED'
-    },
-    connectedMailboxes: isAdminUser
-      ? [
-          {
-            email: 'hello@amusemacstudio.in',
-            provider: 'Zoho Mail Enterprise',
-            connectedAt: new Date().toISOString()
-          }
-        ]
-      : [],
-    sheetsWebhookUrl: '',
-    createdAt: new Date().toISOString().slice(0, 10),
-    adminEmail: cleanEmail,
+    adminEmail: targetAdminEmail,
     adminName: user.name,
-    notes: 'Authenticated via Server-Verified Google OAuth'
+    emailConfig: {
+      provider: 'ZOHO',
+      email: process.env.ZOHO_EMAIL || 'hello@amusemacstudio.in',
+      status: 'CONNECTED'
+    },
+    connectedMailboxes: [
+      {
+        email: process.env.ZOHO_EMAIL || 'hello@amusemacstudio.in',
+        provider: 'Zoho Mail Enterprise',
+        connectedAt: new Date().toISOString()
+      }
+    ],
+    sheetsWebhookUrl: process.env.GOOGLE_SHEETS_WEBHOOK_URL || '',
+    createdAt: new Date().toISOString().slice(0, 10)
   };
 
-  // Construct standard secure session token
   const exp = Date.now() + 86400000;
   const tokenPayload = {
     userId,
     orgId,
     role,
-    email: cleanEmail,
-    plan: planId || 'FREE',
+    email: targetAdminEmail,
+    plan: planId,
     exp
   };
 
@@ -319,232 +236,15 @@ app.post('/api/auth/google', async (req, res) => {
 
   updateUserPresence(userId, orgId, 'LOGIN', {
     userName: user.name,
-    email: cleanEmail,
+    email: targetAdminEmail,
     role,
     sessionId: token
   });
-  recordAuditLog('USER_LOGIN', { userId, orgId, email: cleanEmail, role });
+  recordAuditLog('ADMIN_LOGIN', { userId, orgId, email: targetAdminEmail, role });
 
   return res.json({
     success: true,
-    message: 'Google authentication successful',
-    session
-  });
-});
-
-// GET /api/auth/zoho/url - Get Zoho OAuth authorization URL
-app.get('/api/auth/zoho/url', (req, res) => {
-  const clientId = process.env.ZOHO_CLIENT_ID || process.env.VITE_ZOHO_CLIENT_ID || '';
-  const redirectUri = process.env.ZOHO_REDIRECT_URI || `${allowedOrigin}/auth/zoho/callback`;
-  const accountsUrl = process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho.com';
-  const scope = 'ZohoMail.messages.ALL,ZohoMail.accounts.READ,aaaserver.profile.READ';
-
-  if (!clientId) {
-    return res.json({
-      success: false,
-      configured: false,
-      message: 'ZOHO_CLIENT_ID is not configured on server',
-      url: ''
-    });
-  }
-
-  const state = `state_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-  const authUrl = `${accountsUrl}/oauth/v2/auth?response_type=code&client_id=${encodeURIComponent(clientId)}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}&access_type=offline&prompt=consent&state=${state}`;
-
-  res.json({
-    success: true,
-    configured: true,
-    url: authUrl,
-    state
-  });
-});
-
-// POST /api/auth/zoho/callback - Process Zoho authorization code & return authenticated session
-app.post('/api/auth/zoho/callback', async (req, res) => {
-  const { code, state } = req.body || {};
-
-  if (!code || typeof code !== 'string') {
-    return res.status(400).json({
-      success: false,
-      message: 'Authorization code is required'
-    });
-  }
-
-  let zohoEmail = '';
-  let zohoName = '';
-  let zohoZuid = '';
-
-  // Check for test code format: amu_ztest_<b64> (disabled in production)
-  if (code.startsWith('amu_ztest_')) {
-    const isTestBypassAllowed = process.env.ENABLE_TEST_AUTH_BYPASS && process.env.ENABLE_TEST_AUTH_BYPASS.trim() === 'true' && process.env.NODE_ENV !== 'production';
-    if (!isTestBypassAllowed) {
-      return res.status(401).json({
-        success: false,
-        message: 'Test OAuth tokens are not allowed in production'
-      });
-    }
-    try {
-      const rawB64 = code.slice('amu_ztest_'.length).replace(/-/g, '+').replace(/_/g, '/');
-      const padLen = (4 - (rawB64.length % 4)) % 4;
-      const padded = rawB64 + '='.repeat(padLen);
-      const parsed = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
-      zohoEmail = (parsed.email || 'user@zoho.com').toLowerCase();
-      zohoName = parsed.name || 'Zoho User';
-      zohoZuid = parsed.zuid || `zuid_${Date.now()}`;
-    } catch (err) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid Zoho test authorization code format'
-      });
-    }
-  } else {
-    const clientId = process.env.ZOHO_CLIENT_ID || process.env.VITE_ZOHO_CLIENT_ID;
-    const clientSecret = process.env.ZOHO_CLIENT_SECRET;
-    const redirectUri = process.env.ZOHO_REDIRECT_URI || `${allowedOrigin}/auth/zoho/callback`;
-    const accountsUrl = process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho.com';
-
-    if (!clientId || !clientSecret) {
-      return res.status(500).json({
-        success: false,
-        message: 'Zoho OAuth environment variables (ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET) are not configured on server'
-      });
-    }
-
-    try {
-      const tokenUrl = `${accountsUrl}/oauth/v2/token`;
-      const params = new URLSearchParams({
-        code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code'
-      });
-
-      const tokenRes = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString()
-      });
-
-      const tokenData = await tokenRes.json();
-      if (!tokenRes.ok || tokenData.error) {
-        return res.status(401).json({
-          success: false,
-          message: `Zoho token exchange failed: ${tokenData.error || tokenRes.statusText}`
-        });
-      }
-
-      const userInfoUrl = `${accountsUrl}/oauth/user/info`;
-      const userRes = await fetch(userInfoUrl, {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` }
-      });
-
-      const userData = await userRes.json();
-      if (!userRes.ok || !userData.Email) {
-        return res.status(401).json({
-          success: false,
-          message: 'Failed to retrieve user profile from Zoho'
-        });
-      }
-
-      zohoEmail = userData.Email.toLowerCase();
-      zohoName = userData.First_Name ? `${userData.First_Name} ${userData.Last_Name || ''}`.trim() : 'Zoho User';
-      zohoZuid = userData.ZUID || `zuid_${Date.now()}`;
-    } catch (err) {
-      console.error('[Zoho OAuth Error]', err.message);
-      return res.status(500).json({
-        success: false,
-        message: `Zoho OAuth error: ${err.message}`
-      });
-    }
-  }
-
-  const cleanEmail = zohoEmail.toLowerCase();
-  const isAdminUser = cleanEmail === (process.env.ADMIN_EMAIL || 'hello@amusemacstudio.in');
-
-  const orgId = isAdminUser ? 'amusemac-studio' : `org-cust-${cleanEmail.replace(/[^a-z0-9]/g, '-')}`;
-  const userId = isAdminUser ? 'usr-amusemac-admin' : `usr-${orgId}-admin`;
-  const role = isAdminUser ? 'SUPER_ADMIN' : 'ADMIN';
-  const planId = isAdminUser ? 'ENTERPRISE' : 'FREE';
-
-  const user = {
-    userId,
-    orgId,
-    email: cleanEmail,
-    name: zohoName || 'Zoho User',
-    fullName: zohoName || 'Zoho User',
-    avatarUrl: '',
-    whatsappNumber: '',
-    emailVerified: true,
-    whatsappVerified: false,
-    role,
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString().slice(0, 10),
-    authIdentities: [
-      {
-        identityId: `id-zoho-${zohoZuid}`,
-        userId,
-        provider: 'ZOHO',
-        providerAccountId: zohoZuid,
-        email: cleanEmail,
-        name: zohoName,
-        connectedAt: new Date().toISOString(),
-        isPrimary: true
-      }
-    ]
-  };
-
-  const organization = {
-    orgId,
-    companyName: isAdminUser ? 'Amusemac Studio' : `${zohoName || 'Customer'}'s Workspace`,
-    tagline: isAdminUser ? 'Enterprise Video & AI Production' : 'Customer Workspace',
-    website: isAdminUser ? 'https://www.amusemacstudio.in' : 'https://',
-    status: 'ACTIVE',
-    planId,
-    emailConfig: {
-      provider: 'ZOHO',
-      email: cleanEmail,
-      status: 'CONNECTED'
-    },
-    connectedMailboxes: [
-      {
-        email: cleanEmail,
-        provider: 'Zoho Mail',
-        connectedAt: new Date().toISOString()
-      }
-    ],
-    sheetsWebhookUrl: '',
-    createdAt: new Date().toISOString().slice(0, 10),
-    adminEmail: cleanEmail,
-    adminName: user.name,
-    notes: 'Authenticated via Server-Verified Zoho OAuth'
-  };
-
-  const exp = Date.now() + 86400000;
-  const tokenPayload = {
-    userId,
-    orgId,
-    role,
-    email: cleanEmail,
-    plan: planId || 'FREE',
-    exp
-  };
-
-  const jsonStr = JSON.stringify(tokenPayload);
-  const b64 = Buffer.from(jsonStr).toString('base64');
-  const encodedPayload = b64.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const token = `amu_sess_${encodedPayload}`;
-
-  const session = {
-    user,
-    organization,
-    token,
-    expiresAt: new Date(exp).toISOString()
-  };
-
-  return res.json({
-    success: true,
-    message: 'Zoho authentication successful',
+    message: 'Admin authentication successful',
     session
   });
 });

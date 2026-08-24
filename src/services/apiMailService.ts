@@ -1,6 +1,8 @@
 import { EmailMessage, ZohoMailConfigStatus } from '../types/email';
 import { Lead } from '../types/lead';
 
+export const AMUSEMAC_DEFAULT_EMAIL_SIGNATURE = `\n\nBest regards,\n\nKuldeep Jatwa\nCreative Director & Production Designer\nAmusemac Studio\n+91 8770382125\namusemacstudio.in`;
+
 function getAuthHeaders(orgId?: string): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'

@@ -54,15 +54,26 @@ interface SearchHomeViewProps {
 const RECENT_SEARCHES_KEY = 'amusemac_buyer_recent_searches';
 
 const POPULAR_WORK_CATEGORIES = [
-  { name: 'AI Video', query: 'companies looking for AI video production', icon: '🤖' },
-  { name: 'Corporate Video', query: 'looking for corporate video production team', icon: '🏢' },
-  { name: 'Motion Graphics', query: 'seeking motion graphics designer project', icon: '🎨' },
-  { name: 'Production Design', query: 'production designer requirement film', icon: '🎬' },
-  { name: 'Film Editing', query: 'film editor required post production', icon: '✂️' },
-  { name: 'Social Media Content', query: 'need social media video content agency', icon: '📱' },
-  { name: 'Graphic Design', query: 'seeking graphic design agency key art', icon: '✏️' },
-  { name: 'Website', query: 'website creation agency requirement', icon: '💻' },
-  { name: 'Sound Design', query: 'sound designer needed audio post project', icon: '🎧' }
+  { name: 'AI Video', query: 'looking for AI video production', icon: '🤖' },
+  { name: 'Corporate Video', query: 'need corporate video production', icon: '🏢' },
+  { name: 'Motion Graphics', query: 'motion graphics project requirement', icon: '🎨' },
+  { name: 'Film Editing', query: 'film editor required', icon: '✂️' },
+  { name: 'Production Design', query: 'production designer required', icon: '🎬' },
+  { name: 'Graphic Design', query: 'graphic designer required for campaign', icon: '✏️' },
+  { name: 'Sound Design', query: 'sound designer required', icon: '🎧' },
+  { name: 'Website', query: 'website development requirement', icon: '💻' },
+  { name: 'Social Media', query: 'social media content requirement', icon: '📱' },
+  { name: 'Film Production', query: 'film production company required', icon: '🎥' }
+];
+
+const RECENCY_OPTIONS = [
+  { label: 'Last 30 Days (Default)', value: '30d' },
+  { label: '1 Day', value: '1d' },
+  { label: '2 Days', value: '2d' },
+  { label: '5 Days', value: '5d' },
+  { label: '7 Days', value: '7d' },
+  { label: '15 Days', value: '15d' },
+  { label: '30 Days', value: '30d' }
 ];
 
 const SERVICES_LIST = [
@@ -112,15 +123,6 @@ const ENGAGEMENT_TYPE_OPTIONS: { label: string; value: 'PROJECT' | 'CONTRACT' | 
   { label: 'Engagement: Full-time', value: 'FULL_TIME' },
   { label: 'Engagement: Part-time', value: 'PART_TIME' },
   { label: 'Engagement: Any / Not Specified', value: 'ANY' }
-];
-
-const RECENCY_OPTIONS = [
-  { label: 'Any Time', value: '' },
-  { label: 'Posted Today', value: '1d' },
-  { label: 'Posted Yesterday', value: '2d' },
-  { label: 'Last 3 Days', value: '3d' },
-  { label: 'Last 7 Days', value: '7d' },
-  { label: 'Last 30 Days', value: '30d' }
 ];
 
 export const SearchHomeView: React.FC<SearchHomeViewProps> = ({

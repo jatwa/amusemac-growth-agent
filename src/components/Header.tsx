@@ -19,7 +19,6 @@ import {
 import { Lead, ClientProfile } from '../types/lead';
 import { Organization, UserRole, OrgUsage } from '../types/saas';
 import { applyTheme, getStoredThemePreference } from '../services/themeService';
-import { canAccessAdminPanel } from '../services/entitlementService';
 
 interface HeaderProps {
   leads: Lead[];
@@ -63,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
-  const isAdminAuthorized = canAccessAdminPanel({ role: currentUserRole } as any, activeOrg);
+  const isAdminAuthorized = currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'ADMIN';
 
   const allNavItems = [
     { id: 'search', label: 'Search', icon: Search, badge: 'Intelligence' },
